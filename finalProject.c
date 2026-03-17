@@ -97,7 +97,7 @@ int main(void){
                 state = GAME_STATE;
             }
 			else
-				seedCounter++; 
+				counter++; 
 		}
 		else if(state == GAME_STATE){
 			clearScreen(); 
