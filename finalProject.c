@@ -24,7 +24,8 @@ short int buffer2[240][512];
 #define LOCK_HEIGHT 160
 #define CHAMBER_WIDTH 16
 #define NUM_PINS 5
-
+int pinYPositions[NUM_PINS]; 
+	
 #define COLOR_WOOD    0x3186  // Dark brown
 #define COLOR_BRASS   0xD6A0  // Darker yellow/gold for housing
 #define COLOR_GOLD    0xFEA0  // Bright gold for the pins
@@ -74,7 +75,9 @@ int main(void){
 	*(pixel_ctrl_ptr + 1) = (int) &buffer2;
     pixel_buffer_start = *(pixel_ctrl_ptr + 1); 
     clearScreen();
-	clearCharacter(); 
+	clearCharacter();
+	
+	unsigned int counter = 0;
 	
 	while(1){
 		if(state == MENU_STATE){
@@ -85,8 +88,16 @@ int main(void){
             if (keyPress == 1) { 
                 waitForRelease();
                 clearCharacter(); 
+				
+				srand(counter); //Creates random heights of lockpins based on time 
+				
+				for(int i = 0; i < NUM_PINS; i++){
+                    pinYPositions[i] = 50 + (rand() % 51); 
+                }
                 state = GAME_STATE;
             }
+			else
+				seedCounter++; 
 		}
 		else if(state == GAME_STATE){
 			clearScreen(); 
@@ -185,39 +196,42 @@ void drawStaticLock() {
         //Draw the empty black chamber track extending upwards
         drawRectangle(chamber_x, LOCK_BASE_Y + 10, CHAMBER_WIDTH, 80, COLOR_BLACK);
         
-        //Draw the static spring at the top of the chamber
-        //Use a quick loop to draw alternating lines to simulate coil gaps
-        for(int s = 0; s < 5; s++) {
-            drawRectangle(chamber_x + 2, LOCK_BASE_Y + 10 + (s * 6), CHAMBER_WIDTH - 4, 3, COLOR_SPRING);
-        }
+        
     }
 }
 
-// Assuming these variables are declared globally in your main game loop:
-// int pin_y_positions[NUM_PINS]; // Ranging roughly from Y=90 (up) to Y=110 (resting down)
+// Assuming these variables are declared globally in the main game loop:
+// int pinYPosition[NUM_PINS]; // Ranging roughly from Y=90 (up) to Y=110 (resting down)
 // int pick_x_position;           // Ranging from X=30 to X=200
 
 void drawDynamicElements() {
     //Draw the dynamic pins at their current Y heights
     for(int i = 0; i < NUM_PINS; i++) {
-        int pin_x = LOCK_BASE_X + 25 + (i * 32);
-        int current_y = 50; //Should be current_y = pin_y_position[NUM_PINS] ranging from 90/110 
-        /*
+        int pinX = LOCK_BASE_X + 25 + (i * 32);
+        int currentY = pinYPositions[i]; //Should be current_y = pin_y_position[NUM_PINS] ranging from 90/110 
+		int blockTopY = LOCK_BASE_Y + 10; 
+        
+		//Draw the static spring at the top of the chamber
+        //Use a quick loop to draw alternating lines to simulate coil gaps
+        for(int spring = blockTopY; spring < currentY; spring += 6) {
+            drawRectangle(pinX + 2, spring, CHAMBER_WIDTH - 4, 3, COLOR_SPRING);
+        }
+		
         //Draw the main body of the pin
-        drawRectangle(pin_x + 2, current_y, CHAMBER_WIDTH - 4, 26, COLOR_GOLD); 
+        drawRectangle(pinX + 2, currentY, CHAMBER_WIDTH - 4, 26, COLOR_GOLD); 
         
         //Draw a smaller rectangle at the bottom for rounded pin tip
-        drawRectangle(pin_x + 4, current_y + 26, CHAMBER_WIDTH - 8, 4, COLOR_GOLD);
-		*/ 
+        drawRectangle(pinX + 4, currentY + 26, CHAMBER_WIDTH - 8, 4, COLOR_GOLD);
+		
     }
     
     //Draw the lockpick coming from the left edge of the screen
     //The long thin shaft extending to the current X position
-    drawRectangle(0, 142, 50, 4, COLOR_PICK); 
+    drawRectangle(0, 142, 100, 4, COLOR_PICK); 
     
     //Draw the pick tip (the hook curving up to interact with pins)
-    drawRectangle(50, 136, 4, 10, COLOR_PICK);
-    drawRectangle(50 - 4, 136, 4, 4, COLOR_PICK);
+    drawRectangle(100, 136, 4, 10, COLOR_PICK);
+    drawRectangle(100 - 4, 136, 4, 4, COLOR_PICK);
 }
 
 int readKeys() {
