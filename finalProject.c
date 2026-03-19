@@ -13,6 +13,7 @@
 #define CHAR_BUFFER_BASE 0x09000000 //Character buffer, acts as an overlay on top of the pixel buffer, 80col x 60row grid of character cells
 #define KEY_BASE 0xFF200050 
 #define PS2_BASE 0xFF200100
+#define AUDIO_BASE 0xFF203040
 	
 volatile int pixel_buffer_start; // global variable
 short int buffer1[240][512]; 
@@ -67,6 +68,9 @@ int readPS2(char *byte);
 int readKeys(); 
 void waitForRelease();
 
+//Audio 
+void playStartSound(); 
+
 int main(void){
 	
 	volatile int * pixel_ctrl_ptr = (int *)0xFF203020;
@@ -100,6 +104,8 @@ int main(void){
 					for(int i = 0; i < NUM_PINS; i++){
                         pinYPositions[i] = 50 + (rand() % 51); 
                     }
+					
+					playStartSound(); 
 					
 					state = GAME_STATE;
 				}
@@ -318,5 +324,49 @@ void wait_for_vsync(){
     status = *(pixel_ctrl_ptr + 3); 
     while ((status & 0x01) != 0) { 
         status = *(pixel_ctrl_ptr + 3);
+    }
+}
+
+void playStartSound() {
+    volatile int *audioPtr = (int *)AUDIO_BASE;
+    int leftFifoSpace;
+    int rightFifoSpace;
+    
+    // Audio parameters
+    int sampleRate = 48000;
+    int freq = 1760; // High pitch frequency in Hz
+    int halfPeriod = sampleRate / freq / 2;
+    int volume = 0x00FFFFFF; // High volume, but avoids clipping the speakers
+    
+    int durationSamples = sampleRate / 4; // Play for exactly 0.25 seconds
+    int currentSample = 0;
+    int waveCounter = 0;
+    int currentAmplitude = volume;
+    
+    // This loop blocks the game for 0.25s while it plays the sound
+    while (currentSample < durationSamples) {
+        // Read the FIFOSpace register (offset +1)
+        int fifoSpace = *(audioPtr + 1);
+        
+        // Extract the available space for left (bits 24-31) and right (bits 16-23)
+        leftFifoSpace = (fifoSpace >> 24) & 0xFF;
+        rightFifoSpace = (fifoSpace >> 16) & 0xFF;
+        
+        // Only write if there is physical room in both hardware buffers
+        if (leftFifoSpace > 0 && rightFifoSpace > 0) {
+            
+            // Write the current wave amplitude to Left (offset +2) and Right (offset +3)
+            *(audioPtr + 2) = currentAmplitude;
+            *(audioPtr + 3) = currentAmplitude;
+            
+            currentSample++;
+            waveCounter++;
+            
+            // Toggle the square wave up and down based on the frequency
+            if (waveCounter >= halfPeriod) {
+                currentAmplitude = -currentAmplitude; // Flip the wave
+                waveCounter = 0;
+            }
+        }
     }
 }
