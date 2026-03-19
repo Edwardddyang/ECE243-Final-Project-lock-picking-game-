@@ -100,14 +100,13 @@ int main(void){
 				if(keyByte == 0x5A){
 					
 					playStartSound(); 
-
+				
 					clearCharacter(); 
 					
 					srand(counter); 
 					for(int i = 0; i < NUM_PINS; i++){
                         pinYPositions[i] = 50 + (rand() % 51); 
                     }
-					
 					
 					state = GAME_STATE;
 				}
@@ -338,7 +337,7 @@ void playStartSound() {
     int sampleRate = 8000;
     int freq = 1760; // High pitch frequency in Hz
     int halfPeriod = sampleRate / freq / 2;
-    int volume = 0x0FFFFFF; // High volume, but avoids clipping the speakers
+    int volume = 0x0FFFFFFF; // High volume, but avoids clipping the speakers
     
     int durationSamples = sampleRate / 6; // Play for exactly 0.25 seconds
     int currentSample = 0;
