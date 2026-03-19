@@ -12,12 +12,14 @@
 //Memory mapped addresses  
 #define CHAR_BUFFER_BASE 0x09000000 //Character buffer, acts as an overlay on top of the pixel buffer, 80col x 60row grid of character cells
 #define KEY_BASE 0xFF200050 
+#define PS2_BASE 0xFF200100
+#define AUDIO_BASE 0xFF203040
 	
 volatile int pixel_buffer_start; // global variable
 short int buffer1[240][512]; 
 short int buffer2[240][512];
 
-//DEFINES
+//DEFINES/VARIABLES FOR DRAWING 
 #define LOCK_BASE_X 60
 #define LOCK_BASE_Y 40
 #define LOCK_WIDTH 200
@@ -25,6 +27,10 @@ short int buffer2[240][512];
 #define CHAMBER_WIDTH 16
 #define NUM_PINS 5
 int pinYPositions[NUM_PINS]; 
+int pickXPosition = 50; //Starting X position of the lockpick 
+bool ignoreNext = false; //A flag to catch the 0xF0 key-release byte
+bool moveLeft = false;
+bool moveRight = false;
 	
 #define COLOR_WOOD    0x3186  // Dark brown
 #define COLOR_BRASS   0xD6A0  // Darker yellow/gold for housing
@@ -34,7 +40,6 @@ int pinYPositions[NUM_PINS];
 #define COLOR_PICK    0xCE79  // Dull steel for the lockpick
 
 //STATES
-	
 #define MENU_STATE 0
 #define GAME_STATE 1
 	
@@ -56,10 +61,16 @@ void drawMenu();
 //Drawing lock 
 void drawStaticLock(); 
 void drawDynamicElements(); 
+int readPS2(char *byte);  
+
 
 //State changing 
 int readKeys(); 
 void waitForRelease();
+
+//Audio 
+void playStartSound(); 
+void successfulPickSound(); 
 
 int main(void){
 	
@@ -84,27 +95,71 @@ int main(void){
 			clearScreen();
 			drawMenu(); 
 			
-			int keyPress = readKeys();
-            if (keyPress == 1) { 
-                waitForRelease();
-                clearCharacter(); 
-				
-				srand(counter); //Creates random heights of lockpins based on time 
-				
-				for(int i = 0; i < NUM_PINS; i++){
-                    pinYPositions[i] = 50 + (rand() % 51); 
+			char keyByte; 
+			if(readPS2(&keyByte)){
+				if(keyByte == 0x5A){
+					
+					playStartSound(); 
+
+					clearCharacter(); 
+					
+					srand(counter); 
+					for(int i = 0; i < NUM_PINS; i++){
+                        pinYPositions[i] = 50 + (rand() % 51); 
+                    }
+					
+					
+					state = GAME_STATE;
+				}
+				else
+					counter++; 
+			} 
+		}
+        else if(state == GAME_STATE){
+            clearScreen(); 
+            
+            char keyByte;
+            //A while loop reads every byte the keyboard sends this frame for less lag.
+            while(readPS2(&keyByte)){
+                if(keyByte == (char)0xF0){
+                    ignoreNext = true; //Next byte will tell which key was let go 
+                } 
+				//To ignore the next byte 
+                else if(ignoreNext){
+					//Stop moving 
+                    if(keyByte == (char)0x1C) 
+						moveLeft = false;
+                    else if(keyByte == (char)0x23) 
+						moveRight = false;
+                    ignoreNext = false; 
+                } 
+                else{
+					//Key pressed 
+					if(keyByte == (char)0x1C) 
+						moveLeft = true;
+                    else if(keyByte == (char)0x23)
+						moveRight = true;
                 }
-                state = GAME_STATE;
             }
-			else
-				counter++; 
-		}
-		else if(state == GAME_STATE){
-			clearScreen(); 
-			
-			drawStaticLock(); 
-			drawDynamicElements();
-		}
+            
+            //Move the pick  
+            int pickSpeed = 8; // Increase this number to make the pick fly!
+            
+            if(moveLeft){
+                pickXPosition -= pickSpeed; 
+                if(pickXPosition < 20) 
+					pickXPosition = 20; 
+            }
+            if(moveRight){
+                pickXPosition += pickSpeed; 
+                if(pickXPosition > 250) 
+					pickXPosition = 250; 
+            }
+            
+            drawStaticLock(); 
+            drawDynamicElements();
+        }
+		
 		wait_for_vsync(); 
         pixel_buffer_start = *(pixel_ctrl_ptr + 1);
 	}
@@ -227,11 +282,11 @@ void drawDynamicElements() {
     
     //Draw the lockpick coming from the left edge of the screen
     //The long thin shaft extending to the current X position
-    drawRectangle(0, 142, 100, 4, COLOR_PICK); 
+    drawRectangle(0, 142, pickXPosition, 4, COLOR_PICK); 
     
     //Draw the pick tip (the hook curving up to interact with pins)
-    drawRectangle(100, 136, 4, 10, COLOR_PICK);
-    drawRectangle(100 - 4, 136, 4, 4, COLOR_PICK);
+    drawRectangle(pickXPosition, 136, 4, 10, COLOR_PICK);
+    drawRectangle(pickXPosition - 4, 136, 4, 4, COLOR_PICK);
 }
 
 int readKeys() {
@@ -246,6 +301,21 @@ void waitForRelease() {
     }
 }
 
+//Reads a single byte from the PS/2 keyboard buffer
+//Returns 1 if a key was pressed, 0 if the buffer is empty
+int readPS2(char *byte) {
+    volatile int *ps2Ptr = (int *)PS2_BASE;
+    int ps2Data = *ps2Ptr; //Gets the input from the keyboard 
+    
+    //Bit 15 is the RVALID (Read Valid) flag.
+    //If it is 1, there is valid keyboard data in the lowest 8 bits.
+    if (ps2Data & 0x8000) {
+        *byte = ps2Data & 0xFF; //Extract the hex Make Code
+        return 1;
+    }
+    return 0;
+}
+
 void wait_for_vsync(){
 	volatile int *pixel_ctrl_ptr = (int *)0xFF203020; 
     register int status;
@@ -256,5 +326,111 @@ void wait_for_vsync(){
     status = *(pixel_ctrl_ptr + 3); 
     while ((status & 0x01) != 0) { 
         status = *(pixel_ctrl_ptr + 3);
+    }
+}
+
+void playStartSound() {
+    volatile int *audioPtr = (int *)AUDIO_BASE;
+    int leftFifoSpace;
+    int rightFifoSpace;
+    
+    // Audio parameters
+    int sampleRate = 8000;
+    int freq = 1760; // High pitch frequency in Hz
+    int halfPeriod = sampleRate / freq / 2;
+    int volume = 0x0FFFFFF; // High volume, but avoids clipping the speakers
+    
+    int durationSamples = sampleRate / 6; // Play for exactly 0.25 seconds
+    int currentSample = 0;
+    int waveCounter = 0;
+    int currentAmplitude = volume;
+    
+    // This loop blocks the game for 0.25s while it plays the sound
+    while (currentSample < durationSamples) {
+        // Read the FIFOSpace register (offset +1)
+        int fifoSpace = *(audioPtr + 1);
+        
+        // Extract the available space for left (bits 24-31) and right (bits 16-23)
+        leftFifoSpace = (fifoSpace >> 24) & 0xFF;
+        rightFifoSpace = (fifoSpace >> 16) & 0xFF;
+        
+        // Only write if there is physical room in both hardware buffers
+        if (leftFifoSpace > 0 && rightFifoSpace > 0) {
+            
+            // Write the current wave amplitude to Left (offset +2) and Right (offset +3)
+            *(audioPtr + 2) = currentAmplitude;
+            *(audioPtr + 3) = currentAmplitude;
+            
+            currentSample++;
+            waveCounter++;
+            
+            // Toggle the square wave up and down based on the frequency
+            if (waveCounter >= halfPeriod) {
+                currentAmplitude = -currentAmplitude; // Flip the wave
+                waveCounter = 0;
+            }
+        }
+    }
+}
+
+void successfulPickSound() {
+    volatile int *audioPtr = (int *)0xFF203040;
+    
+    int sampleRate = 8000; 
+    int volume = 0x0FFFFFFF; //Safe volume to prevent clipping
+    
+    int freq1 = 1000; 
+    int durationSamples1 = (sampleRate * 100) / 1000; //100 milliseconds
+    int halfPeriod1 = sampleRate / freq1 / 2;
+    
+    int freq2 = 1300; 
+    int durationSamples2 = (sampleRate * 250) / 1000; //100 milliseconds
+    int halfPeriod2 = sampleRate / freq2 / 2;
+    
+    int currentSample = 0;
+    int waveCounter = 0;
+    int currentAmplitude = volume;
+    int leftFifoSpace, rightFifoSpace, fifoSpace;
+    
+	//Play first note 
+    while(currentSample < durationSamples1){
+        fifoSpace = *(audioPtr + 1);
+        leftFifoSpace = (fifoSpace >> 24) & 0xFF;
+        rightFifoSpace = (fifoSpace >> 16) & 0xFF;
+        
+        if(leftFifoSpace > 0 && rightFifoSpace > 0){
+            *(audioPtr + 2) = currentAmplitude;
+            *(audioPtr + 3) = currentAmplitude;
+            currentSample++;
+            waveCounter++;
+            
+            if(waveCounter >= halfPeriod1){
+                currentAmplitude = -currentAmplitude; 
+                waveCounter = 0;
+            }
+        }
+    }
+    
+    //Reset counters for the second note
+    currentSample = 0;
+    waveCounter = 0;
+    
+    //Second note
+    while(currentSample < durationSamples2){
+        fifoSpace = *(audioPtr + 1);
+        leftFifoSpace = (fifoSpace >> 24) & 0xFF;
+        rightFifoSpace = (fifoSpace >> 16) & 0xFF;
+        
+        if(leftFifoSpace > 0 && rightFifoSpace > 0){
+            *(audioPtr + 2) = currentAmplitude;
+            *(audioPtr + 3) = currentAmplitude;
+            currentSample++;
+            waveCounter++;
+            
+            if(waveCounter >= halfPeriod2){
+                currentAmplitude = -currentAmplitude; 
+                waveCounter = 0;
+            }
+        }
     }
 }
