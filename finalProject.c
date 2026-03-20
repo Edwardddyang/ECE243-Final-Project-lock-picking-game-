@@ -47,9 +47,9 @@ bool moveRight = false;
 int targetPattern = 0;
 int matchedPins = 0;
 
-// GLOBAL VARIABLES FOR INTERRUPT TIMER
-volatile int elapsedTime = 0;      // elapsed time in seconds
-volatile int timerStarted = 0;     // 0 = not started, 1 = running
+// GLOBAL VARIABLES FOR TIMER
+volatile int elapsedTime = 0;    
+volatile int timerStarted = 0; // 0 not started
 
 
 //STATES
@@ -89,11 +89,11 @@ int readSwitches();
 void updateLEDs(int lightLed);
 void matchPins(); // display the correct matched pins (in final game this would not be dipslayed)
 
-// Interrupt timer functions
-void set_itimer(void);
-void enable_interrupts(void);
-void handler(void) __attribute__ ((interrupt ("machine")));
-void itimer_ISR(void);
+// Timer functions
+static void handler(void) __attribute__ ((interrupt ("machine")));
+void set_itimer(void); // initialize timer
+void enable_interrupts(void); // enable interrupts
+void itimer_ISR(void); 
 
 
 //********************************
@@ -148,7 +148,7 @@ enable_interrupts();
 					playStartSound(); 
 
                     elapsedTime = 0;
-timerStarted = 1;
+                    timerStarted = 1;
 					
 					state = GAME_STATE;
 				} 
@@ -453,59 +453,52 @@ void set_itimer(void) {
 
     int counterValue = 100000000;  // 1 second at 100 MHz
 
-    // Clear any pending timer interrupt first
+    // Clear any previous interrupt first
     *timer_ptr = 0;
 
-    // Load the 32-bit starting count into the timer period registers
-    *(timer_ptr + 2) = counterValue & 0xFFFF;         // low 16 bits
-    *(timer_ptr + 3) = (counterValue >> 16) & 0xFFFF; // high 16 bits
+    *(timer_ptr + 0x2) = counterValue & 0xFFFF;         // low 16 bits
+    *(timer_ptr + 0x3) = (counterValue >> 16) & 0xFFFF; // high 16 bits
 
-    // Start timer, continuous mode, interrupt enabled
-    *(timer_ptr + 1) = 0x7;   // START + CONT + ITO
+    *(timer_ptr + 1) = 0x7;   // start timer and enable START + CONT + ITO
 }
 
 void enable_interrupts(void) {
     int mstatus_value, mtvec_value, mie_value;
+    mstatus_value = 0b1000; // interrupt bit mask
 
-    mstatus_value = 0b1000;   // machine interrupt enable bit in mstatus
-
-    // Disable global interrupts first while setting everything up
+    // Disable interrupts
     __asm__ volatile ("csrc mstatus, %0" :: "r"(mstatus_value));
-
-    // Set trap handler address
     mtvec_value = (int)&handler;
     __asm__ volatile ("csrw mtvec, %0" :: "r"(mtvec_value));
 
-    // Disable all currently enabled interrupts
+    // Disable all interrupts that are currently enabled
     __asm__ volatile ("csrr %0, mie" : "=r"(mie_value));
     __asm__ volatile ("csrc mie, %0" :: "r"(mie_value));
-
-    // Enable only the interval timer interrupt (IRQ 16 -> bit 16)
-    mie_value = 0x10000;
+    mie_value = 0x10000; // Timer bit 16
+    
+    // Set interrupts enables
     __asm__ volatile ("csrs mie, %0" :: "r"(mie_value));
 
-    // Enable global machine interrupts
+    // Enable Nois V interrupts
     __asm__ volatile ("csrs mstatus, %0" :: "r"(mstatus_value));
 }
 
 void handler(void) {
     int mcause_value;
-
     __asm__ volatile ("csrr %0, mcause" : "=r"(mcause_value));
 
-    if (mcause_value == 0x80000010) {   // interval timer interrupt
+    if (mcause_value == 0x80000010) { // interval timer interrupt
         itimer_ISR();
     }
-    // else ignore other traps for now
 }
 
 void itimer_ISR(void) {
     volatile int *timer_ptr = (int *)TIMER_BASE;
 
-    // Clear the timer interrupt
+    // Clear timer interrupt
     *timer_ptr = 0;
 
-    // Only count time while the game is actually running
+    // Only count time during game state
     if (state == GAME_STATE && timerStarted == 1) {
         elapsedTime++;
     }
