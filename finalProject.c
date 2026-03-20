@@ -1,3 +1,4 @@
+
 //First define all the pointers for all the memory mapped addresses, create functions that can test their useablity 
 //Gonna need double buffering to draw both the static and dynamic elements of the screen 
 	//Static is the menu, locks, end screen
@@ -14,6 +15,9 @@
 #define KEY_BASE 0xFF200050 
 #define PS2_BASE 0xFF200100
 #define AUDIO_BASE 0xFF203040
+#define SWITCH_BASE 0xFF200040
+#define LED_BASE 0xFF200000
+#define TIMER_BASE 0xFF202000 
 	
 volatile int pixel_buffer_start; // global variable
 short int buffer1[240][512]; 
@@ -38,6 +42,15 @@ bool moveRight = false;
 #define COLOR_BLACK   0x0000  // Empty space
 #define COLOR_SPRING  0x7BEF  // Silver/Grey for springs
 #define COLOR_PICK    0xCE79  // Dull steel for the lockpick
+	
+// GLOBAL VARIABLES FOR SWITCH PATTERN
+int targetPattern = 0;
+int matchedPins = 0;
+
+// GLOBAL VARIABLES FOR INTERRUPT TIMER
+volatile int elapsedTime = 0;      // elapsed time in seconds
+volatile int timerStarted = 0;     // 0 = not started, 1 = running
+
 
 //STATES
 #define MENU_STATE 0
@@ -61,7 +74,7 @@ void drawMenu();
 //Drawing lock 
 void drawStaticLock(); 
 void drawDynamicElements(); 
-int readPS2(char *byte);  
+int readPS2(char *byte); 
 
 
 //State changing 
@@ -70,7 +83,22 @@ void waitForRelease();
 
 //Audio 
 void playStartSound(); 
-void successfulPickSound(); 
+
+// Matching switches
+int readSwitches();
+void updateLEDs(int lightLed);
+void matchPins(); // display the correct matched pins (in final game this would not be dipslayed)
+
+// Interrupt timer functions
+void set_itimer(void);
+void enable_interrupts(void);
+void handler(void) __attribute__ ((interrupt ("machine")));
+void itimer_ISR(void);
+
+
+//********************************
+// MAIN GAME LOOP
+//********************************
 
 int main(void){
 	
@@ -87,20 +115,25 @@ int main(void){
     pixel_buffer_start = *(pixel_ctrl_ptr + 1); 
     clearScreen();
 	clearCharacter();
-	
+
+	set_itimer();
+enable_interrupts();
+
 	unsigned int counter = 0;
 	
 	while(1){
 		if(state == MENU_STATE){
 			clearScreen();
-			drawMenu(); 
+			drawMenu();
+            updateLEDs(0); // Clear LEDs in menu
+            timerStarted = 0;
+            counter++; 
+           
 			
 			char keyByte; 
 			if(readPS2(&keyByte)){
 				if(keyByte == 0x5A){
 					
-					playStartSound(); 
-				
 					clearCharacter(); 
 					
 					srand(counter); 
@@ -108,10 +141,17 @@ int main(void){
                         pinYPositions[i] = 50 + (rand() % 51); 
                     }
 					
+					targetPattern = rand() & 0x1F;
+					matchedPins = 0;
+                    
+					
+					playStartSound(); 
+
+                    elapsedTime = 0;
+timerStarted = 1;
+					
 					state = GAME_STATE;
-				}
-				else
-					counter++; 
+				} 
 			} 
 		}
         else if(state == GAME_STATE){
@@ -155,10 +195,13 @@ int main(void){
 					pickXPosition = 250; 
             }
             
+			matchPins();
             drawStaticLock(); 
             drawDynamicElements();
+            updateLEDs(elapsedTime);
         }
 		
+
 		wait_for_vsync(); 
         pixel_buffer_start = *(pixel_ctrl_ptr + 1);
 	}
@@ -334,12 +377,12 @@ void playStartSound() {
     int rightFifoSpace;
     
     // Audio parameters
-    int sampleRate = 8000;
+    int sampleRate = 48000;
     int freq = 1760; // High pitch frequency in Hz
     int halfPeriod = sampleRate / freq / 2;
-    int volume = 0x0FFFFFFF; // High volume, but avoids clipping the speakers
+    int volume = 0x00FFFFFF; // High volume, but avoids clipping the speakers
     
-    int durationSamples = sampleRate / 6; // Play for exactly 0.25 seconds
+    int durationSamples = sampleRate / 4; // Play for exactly 0.25 seconds
     int currentSample = 0;
     int waveCounter = 0;
     int currentAmplitude = volume;
@@ -372,64 +415,98 @@ void playStartSound() {
     }
 }
 
-void successfulPickSound() {
-    volatile int *audioPtr = (int *)0xFF203040;
-    
-    int sampleRate = 8000; 
-    int volume = 0x0FFFFFFF; //Safe volume to prevent clipping
-    
-    int freq1 = 1000; 
-    int durationSamples1 = (sampleRate * 100) / 1000; //100 milliseconds
-    int halfPeriod1 = sampleRate / freq1 / 2;
-    
-    int freq2 = 1300; 
-    int durationSamples2 = (sampleRate * 250) / 1000; //100 milliseconds
-    int halfPeriod2 = sampleRate / freq2 / 2;
-    
-    int currentSample = 0;
-    int waveCounter = 0;
-    int currentAmplitude = volume;
-    int leftFifoSpace, rightFifoSpace, fifoSpace;
-    
-	//Play first note 
-    while(currentSample < durationSamples1){
-        fifoSpace = *(audioPtr + 1);
-        leftFifoSpace = (fifoSpace >> 24) & 0xFF;
-        rightFifoSpace = (fifoSpace >> 16) & 0xFF;
-        
-        if(leftFifoSpace > 0 && rightFifoSpace > 0){
-            *(audioPtr + 2) = currentAmplitude;
-            *(audioPtr + 3) = currentAmplitude;
-            currentSample++;
-            waveCounter++;
-            
-            if(waveCounter >= halfPeriod1){
-                currentAmplitude = -currentAmplitude; 
-                waveCounter = 0;
-            }
+
+// Read the switches 0-3
+int readSwitches(){
+	volatile int* sw = (int *)SWITCH_BASE;
+	return (*sw) & 0x1F;
+}
+
+// Show LEDs
+
+void updateLEDs(int ledToLight){
+	volatile int* led = (int *)LED_BASE;
+	*led = ledToLight;
+}
+
+// Mtch the pins and display on led
+
+void matchPins(){
+	int currentSwitches = readSwitches();
+	matchedPins = 0;
+	
+	for (int pin = 0; pin < NUM_PINS; pin++){
+		int switchToggled = (currentSwitches >> pin) & 1;
+		int patternBit = (targetPattern >> pin) & 1;
+		if (switchToggled == patternBit){
+			matchedPins |= (1 << pin);
         }
+	}
+	
+//	updateLEDs(matchedPins);
+}
+
+
+// Timer functions
+void set_itimer(void) {
+    volatile int *timer_ptr = (int *)TIMER_BASE;
+
+    int counterValue = 100000000;  // 1 second at 100 MHz
+
+    // Clear any pending timer interrupt first
+    *timer_ptr = 0;
+
+    // Load the 32-bit starting count into the timer period registers
+    *(timer_ptr + 2) = counterValue & 0xFFFF;         // low 16 bits
+    *(timer_ptr + 3) = (counterValue >> 16) & 0xFFFF; // high 16 bits
+
+    // Start timer, continuous mode, interrupt enabled
+    *(timer_ptr + 1) = 0x7;   // START + CONT + ITO
+}
+
+void enable_interrupts(void) {
+    int mstatus_value, mtvec_value, mie_value;
+
+    mstatus_value = 0b1000;   // machine interrupt enable bit in mstatus
+
+    // Disable global interrupts first while setting everything up
+    __asm__ volatile ("csrc mstatus, %0" :: "r"(mstatus_value));
+
+    // Set trap handler address
+    mtvec_value = (int)&handler;
+    __asm__ volatile ("csrw mtvec, %0" :: "r"(mtvec_value));
+
+    // Disable all currently enabled interrupts
+    __asm__ volatile ("csrr %0, mie" : "=r"(mie_value));
+    __asm__ volatile ("csrc mie, %0" :: "r"(mie_value));
+
+    // Enable only the interval timer interrupt (IRQ 16 -> bit 16)
+    mie_value = 0x10000;
+    __asm__ volatile ("csrs mie, %0" :: "r"(mie_value));
+
+    // Enable global machine interrupts
+    __asm__ volatile ("csrs mstatus, %0" :: "r"(mstatus_value));
+}
+
+void handler(void) {
+    int mcause_value;
+
+    __asm__ volatile ("csrr %0, mcause" : "=r"(mcause_value));
+
+    if (mcause_value == 0x80000010) {   // interval timer interrupt
+        itimer_ISR();
     }
-    
-    //Reset counters for the second note
-    currentSample = 0;
-    waveCounter = 0;
-    
-    //Second note
-    while(currentSample < durationSamples2){
-        fifoSpace = *(audioPtr + 1);
-        leftFifoSpace = (fifoSpace >> 24) & 0xFF;
-        rightFifoSpace = (fifoSpace >> 16) & 0xFF;
-        
-        if(leftFifoSpace > 0 && rightFifoSpace > 0){
-            *(audioPtr + 2) = currentAmplitude;
-            *(audioPtr + 3) = currentAmplitude;
-            currentSample++;
-            waveCounter++;
-            
-            if(waveCounter >= halfPeriod2){
-                currentAmplitude = -currentAmplitude; 
-                waveCounter = 0;
-            }
-        }
+    // else ignore other traps for now
+}
+
+void itimer_ISR(void) {
+    volatile int *timer_ptr = (int *)TIMER_BASE;
+
+    // Clear the timer interrupt
+    *timer_ptr = 0;
+
+    // Only count time while the game is actually running
+    if (state == GAME_STATE && timerStarted == 1) {
+        elapsedTime++;
     }
 }
