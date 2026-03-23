@@ -58,6 +58,7 @@ volatile int timerStarted = 0;  // 0 not started
 // STATES
 #define MENU_STATE 0
 #define GAME_STATE 1
+#define END_STATE 2
 
 int state = MENU_STATE;
 
@@ -188,6 +189,23 @@ int main(void) {
 
       drawTimer();
       updateLEDs(elapsedTime);
+    } else if (state == END_STATE) {
+      clearScreen();
+      drawEndScreen();
+
+      char keyByte;
+      // Drain the PS/2 buffer looking for the Enter key
+      while (readPS2(&keyByte)) {
+        if (keyByte == (char)0xF0) {
+          ignoreNext = true;
+        } else if (ignoreNext) {
+          ignoreNext = false;
+        } else if (keyByte == 0x5A) {
+          // Enter Key Pressed Loop back to the start!
+          clearCharacter();
+          state = MENU_STATE;
+        }
+      }
     }
 
     wait_for_vsync();
@@ -205,6 +223,25 @@ void drawMenu() {
   writeString(30, 15, "WELCOME TO LOCK PICK");
   writeString(35, 29, "START GAME");
   ;
+}
+
+void drawEndScreen() {
+  // Draw a solid black background
+  drawRectangle(0, 0, 320, 240, COLOR_BLACK);
+
+  // Draw a golden banner in the center
+  drawRectangle(60, 80, 200, 80, COLOR_GOLD);
+
+  // Write the victory text
+  writeString(34, 23, "LOCK PICKED!");
+
+  // Format and display the final time
+  char timeMsg[30];
+  snprintf(timeMsg, sizeof(timeMsg), "FINAL TIME: %03d SEC", elapsedTime);
+  writeString(30, 26, timeMsg);
+
+  // Prompt to play again
+  writeString(29, 32, "PRESS ENTER TO RESTART");
 }
 
 // Clears the entire screen black at the start
