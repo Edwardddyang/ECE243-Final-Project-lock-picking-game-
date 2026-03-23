@@ -86,6 +86,7 @@ void waitForRelease();
 
 // Audio
 void playStartSound();
+void playSuccessSound();
 
 // Matching switches
 int readSwitches();
@@ -98,6 +99,7 @@ static void handler(void) __attribute__((interrupt("machine")));
 void set_itimer(void);         // initialize timer
 void enable_interrupts(void);  // enable interrupts
 void itimer_ISR(void);
+void drawTimer();
 
 int main(void) {
   volatile int* pixel_ctrl_ptr = (int*)0xFF203020;
@@ -183,6 +185,8 @@ int main(void) {
 
       drawDynamicElements();
       matchPins();
+
+      drawTimer();
       updateLEDs(elapsedTime);
     }
 
@@ -212,6 +216,20 @@ void clearScreen() {
       plot_pixel(i, j, 0x0000);
     }
   }
+}
+
+// Formats the elapsed time and prints it to the top right of the character
+// buffer
+void drawTimer() {
+  char timeStr[20];
+
+  // Format the string. "%03d" ensures it always takes up 3 digits (e.g., 001,
+  // 015, 120)
+  snprintf(timeStr, sizeof(timeStr), "TIME: %03d", elapsedTime);
+
+  // X = 68 (near the right edge of the 80-column grid)
+  // Y = 2  (near the top of the 60-row grid)
+  writeString(68, 2, timeStr);
 }
 
 // Writes character
@@ -409,6 +427,80 @@ void playStartSound() {
       // Toggle the square wave up and down based on the frequency
       if (waveCounter >= halfPeriod) {
         currentAmplitude = -currentAmplitude;  // Flip the wave
+        waveCounter = 0;
+      }
+    }
+  }
+}
+
+void playSuccessSound() {
+  volatile int* audioPtr = (int*)AUDIO_BASE;
+
+  // Audio parameters configured for CPUlator
+  int sampleRate = 8000;
+  int volume = 0x00FFFFFF;
+
+  int freq1 = 2093;
+  int halfPeriod1 = sampleRate / freq1 / 2;
+  int duration1 = sampleRate / 10;  // 0.1 seconds
+  int currentSample = 0;
+  int waveCounter = 0;
+  int currentAmplitude = volume;
+
+  while (currentSample < duration1) {
+    int fifoSpace = *(audioPtr + 1);
+    int leftSpace = (fifoSpace >> 24) & 0xFF;
+    int rightSpace = (fifoSpace >> 16) & 0xFF;
+
+    if (leftSpace > 0 && rightSpace > 0) {
+      *(audioPtr + 2) = currentAmplitude;
+      *(audioPtr + 3) = currentAmplitude;
+      currentSample++;
+      waveCounter++;
+
+      if (waveCounter >= halfPeriod1) {
+        currentAmplitude = -currentAmplitude;
+        waveCounter = 0;
+      }
+    }
+  }
+
+  int pauseDuration = sampleRate / 20;  // 0.05 seconds
+  currentSample = 0;
+
+  while (currentSample < pauseDuration) {
+    int fifoSpace = *(audioPtr + 1);
+    int leftSpace = (fifoSpace >> 24) & 0xFF;
+    int rightSpace = (fifoSpace >> 16) & 0xFF;
+
+    if (leftSpace > 0 && rightSpace > 0) {
+      // Write 0 to the speakers to create silence
+      *(audioPtr + 2) = 0;
+      *(audioPtr + 3) = 0;
+      currentSample++;
+    }
+  }
+
+  int freq2 = 2637;  // Slightly higher pitch!
+  int halfPeriod2 = sampleRate / freq2 / 2;
+  int duration2 = (sampleRate * 15) / 100;  // 0.15 seconds
+  currentSample = 0;
+  waveCounter = 0;
+  currentAmplitude = volume;
+
+  while (currentSample < duration2) {
+    int fifoSpace = *(audioPtr + 1);
+    int leftSpace = (fifoSpace >> 24) & 0xFF;
+    int rightSpace = (fifoSpace >> 16) & 0xFF;
+
+    if (leftSpace > 0 && rightSpace > 0) {
+      *(audioPtr + 2) = currentAmplitude;
+      *(audioPtr + 3) = currentAmplitude;
+      currentSample++;
+      waveCounter++;
+
+      if (waveCounter >= halfPeriod2) {
+        currentAmplitude = -currentAmplitude;
         waveCounter = 0;
       }
     }
