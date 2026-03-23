@@ -70,10 +70,11 @@ void drawRectangle(int x0, int y0, int width, int height, short int color);
 void plot_pixel(int x, int y, short int line_color);
 void wait_for_vsync();
 
-// Drawing menu
+// Drawing screens
 void writeCharacter(int x, int y, char c);
 void writeString(int x, int y, char* str);
 void drawMenu();
+void drawEndScreen();
 
 // Drawing lock
 void drawStaticLock();
