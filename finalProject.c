@@ -114,10 +114,10 @@ void drawTimer();
 #define SHEAR_LINE_Y 75
 #define PIN_REST_Y 110
 
+//Game Design 
 int currentPinIndex = 0;
-bool isHoldingW = false;  // Tracks if the pick is actively lifting a pin
-bool pinSet[NUM_PINS] = {false, false, false, false,
-                         false};  // Tracks which pins are picked
+bool isHoldingW = false; //Tracks if pin is being held 
+bool pinSet[NUM_PINS] = {false, false, false, false, false};  // Tracks which pins are picked
 
 int main(void) {
   volatile int* pixel_ctrl_ptr = (int*)0xFF203020;
@@ -199,28 +199,26 @@ int main(void) {
         } else if (ignoreNext) {
           ignoreNext = false;
 
-          // KEY RELEASED (Break Code)
-          if (keyByte == (char)0x1D) {  // Released 'W'
+          //Key released is W 
+          if (keyByte == (char)0x1D) {
             isHoldingW = false;
-
-            // --- THE REFLEX CHECK ---
-            // Did you release it while the gap was on the Shear Line?
+            //Was W release it while the gap was on the line?
             if (!pinSet[currentPinIndex]) {
               // Margin of error: +/- 3 pixels from the perfect line
               if (pinYPositions[currentPinIndex] >= SHEAR_LINE_Y - 3 &&
                   pinYPositions[currentPinIndex] <= SHEAR_LINE_Y + 3) {
-                pinSet[currentPinIndex] = true;  // Lock it in!
-                playSuccessSound();              // DING DING!
+                pinSet[currentPinIndex] = true;  //Update the lockpin as picked 
+                playSuccessSound();          
               }
             }
           }
         } else {
-          // KEY PRESSED (Make Code)
+          //Key pressed 
           if (keyByte == (char)0x1C && !isHoldingW) {
-            if (currentPinIndex > 0) currentPinIndex--;  // Move Left
+            if (currentPinIndex > 0) currentPinIndex--;  // Move lockpick Left
           } else if (keyByte == (char)0x23 && !isHoldingW) {
             if (currentPinIndex < NUM_PINS - 1)
-              currentPinIndex++;  // Move Right
+              currentPinIndex++;  // Move lockpick Right
           } else if (keyByte == (char)0x1D) {
             // Press 'W' to start lifting, but only if it's not already set
             if (!pinSet[currentPinIndex]) {
@@ -230,14 +228,14 @@ int main(void) {
         }
       }
 
-      // --- PHYSICS ENGINE ---
+      // Game physics 
       if (isHoldingW) {
-        // Lift the pin smoothly while holding W
-        pinYPositions[currentPinIndex] -= 2;
+        // Lift the pin while holding W
+        pinYPositions[currentPinIndex] -= 1;
         if (pinYPositions[currentPinIndex] < 45)
           pinYPositions[currentPinIndex] = 45;  // Ceiling
       } else {
-        // Gravity! Make unset pins fall back down to the resting position
+        //Gravity 
         for (int i = 0; i < NUM_PINS; i++) {
           if (!pinSet[i] && pinYPositions[i] < PIN_REST_Y) {
             pinYPositions[i] += 4;  // Fall fast
