@@ -62,6 +62,15 @@ volatile int timerStarted = 0;  // 0 not started
 
 int state = MENU_STATE;
 
+// DIFFICULTIES
+#define DIFF_EASY 0
+#define DIFF_MEDIUM 1
+#define DIFF_HARD 2
+
+int menuSelection = DIFF_EASY;
+int gameDifficulty = DIFF_EASY;
+bool gameWon = false;
+
 // FUNCTION DECLARATIONS
 // General purpose
 void clearScreen();
@@ -70,7 +79,7 @@ void drawRectangle(int x0, int y0, int width, int height, short int color);
 void plot_pixel(int x, int y, short int line_color);
 void wait_for_vsync();
 
-// Drawing screens
+// Drawing menu
 void writeCharacter(int x, int y, char c);
 void writeString(int x, int y, char* str);
 void drawMenu();
@@ -125,39 +134,53 @@ int main(void) {
 
   while (1) {
     if (state == MENU_STATE) {
-      clearScreen();
       drawMenu();
       updateLEDs(0);  // Clear LEDs in menu
       timerStarted = 0;
       counter++;
 
       char keyByte;
-      if (readPS2(&keyByte)) {
-        if (keyByte == 0x5A) {
-          clearCharacter();
+      while (readPS2(&keyByte)) {
+        if (keyByte == (char)0xF0)
+          ignoreNext = true;  // Key release coming up
+        else if (ignoreNext)
+          ignoreNext = false;  // Ignore key releases in the menu
+        else {
+          // KEY PRESSED
+          if (keyByte == (char)0x1D) {
+            //'W' pressed
+            if (menuSelection > 0) menuSelection--;
+          } else if (keyByte == (char)0x1B) {
+            //'S' pressed
+            if (menuSelection < 2) menuSelection++;
+          } else if (keyByte == (char)0x5A) {
+            // Enter pressed, start the game with the selected difficulty
+            gameDifficulty = menuSelection;
 
-          srand(counter);
-          for (int i = 0; i < NUM_PINS; i++) {
-            pinYPositions[i] = 50 + (rand() % 51);
+            clearCharacter();
+
+            srand(counter);
+            for (int i = 0; i < NUM_PINS; i++) {
+              pinYPositions[i] = 50 + (rand() % 51);
+            }
+
+            targetPattern = rand() & 0x1F;
+            matchedPins = 0;
+
+            playStartSound();
+
+            elapsedTime = 0;
+            timerStarted = 1;
+
+            // Draw the heavy lock to both buffers once
+            pixel_buffer_start = (int)&buffer1;
+            drawStaticLock();
+
+            pixel_buffer_start = (int)&buffer2;
+            drawStaticLock();
+
+            state = GAME_STATE;
           }
-
-          targetPattern = rand() & 0x1F;
-          matchedPins = 0;
-
-          playStartSound();
-
-          elapsedTime = 0;
-          timerStarted = 1;
-
-          // First buffer
-          pixel_buffer_start = (int)&buffer1;
-          drawStaticLock();
-
-          // Buffer 2
-          pixel_buffer_start = (int)&buffer2;
-          drawStaticLock();
-
-          state = GAME_STATE;
         }
       }
     } else if (state == GAME_STATE) {
@@ -188,8 +211,25 @@ int main(void) {
       drawDynamicElements();
       matchPins();
 
-      drawTimer();
-      updateLEDs(elapsedTime);
+      int maxTime = 180;
+      if (gameDifficulty == DIFF_MEDIUM) maxTime = 120;
+      if (gameDifficulty == DIFF_HARD) maxTime = 60;
+
+      if (matchedPins == 0x1F) {
+        timerStarted = 0;
+        gameWon = true;
+        clearCharacter();
+        state = END_STATE;
+      } else if (elapsedTime >= maxTime) {
+        timerStarted = 0;
+        gameWon = false;
+        clearCharacter();
+        state = END_STATE;
+      } else {
+        // Game is still actively running
+        updateLEDs(elapsedTime);
+        drawTimer();
+      }
     } else if (state == END_STATE) {
       clearScreen();
       drawEndScreen();
@@ -215,31 +255,52 @@ int main(void) {
 }
 
 void drawMenu() {
-  drawRectangle(80, 40, 160, 160, 0x001F);  // Blue background rectangle
+  // Solid blue background rectangle
+  drawRectangle(80, 40, 160, 160, 0x001F);
 
-  // Highlight box for STARTGAME
-  drawRectangle(100, 110, 120, 24, 0x07E0);  // 0x07E0 is Green
-
-  // Write the text
+  // Main Title
   writeString(30, 15, "WELCOME TO LOCK PICK");
-  writeString(35, 29, "START GAME");
-  ;
+
+  // Calculate the positions for the 3 menu options
+  int baseY = 90;
+  int boxHeight = 24;
+  int spacing = 35;
+
+  // Draw the highlight boxes
+  for (int i = 0; i < 3; i++) {
+    if (i == menuSelection) {
+      // Draw GREEN highlight if it is the currently selected option
+      drawRectangle(100, baseY + (i * spacing), 120, boxHeight, 0x07E0);
+    } else {
+      // Draw BLUE background to clear out the old highlight
+      drawRectangle(100, baseY + (i * spacing), 120, boxHeight, 0x001F);
+    }
+  }
+
+  // Write the text directly over the boxes
+  writeString(38, 24, "EASY");
+  writeString(37, 33, "MEDIUM");
+  writeString(38, 41, "HARD");
 }
 
 void drawEndScreen() {
   // Draw a solid black background
   drawRectangle(0, 0, 320, 240, COLOR_BLACK);
 
-  // Draw a golden banner in the center
-  drawRectangle(60, 80, 200, 80, COLOR_GOLD);
+  if (gameWon) {
+    // Game won
+    drawRectangle(60, 80, 200, 80, COLOR_GOLD);
+    writeString(34, 23, "LOCK PICKED!");
 
-  // Write the victory text
-  writeString(34, 23, "LOCK PICKED!");
-
-  // Format and display the final time
-  char timeMsg[30];
-  snprintf(timeMsg, sizeof(timeMsg), "FINAL TIME: %03d SEC", elapsedTime);
-  writeString(30, 26, timeMsg);
+    char timeMsg[30];
+    snprintf(timeMsg, sizeof(timeMsg), "FINAL TIME: %03d SEC", elapsedTime);
+    writeString(30, 26, timeMsg);
+  } else {
+    // Game lost (0xF800 is pure red in 16-bit color)
+    drawRectangle(60, 80, 200, 80, 0xF800);
+    writeString(35, 23, "TIME'S UP!");
+    writeString(31, 26, "YOU FAILED TO PICK THE LOCK");
+  }
 
   // Prompt to play again
   writeString(29, 32, "PRESS ENTER TO RESTART");
