@@ -256,32 +256,7 @@ int main(void) {
 
             srand(counter);
 
-            // Generate 5 perfectly unique random pins out of thin air
-            for (int i = 0; i < NUM_PINS; i++) {
-              int randomPin;
-              bool isDuplicate;
-
-              // Keep rolling the dice until we get a pin we haven't seen yet!
-              do {
-                randomPin = rand() % NUM_PINS;
-                isDuplicate = false;
-
-                // Scan the pins we've already generated to check for a match
-                for (int j = 0; j < i; j++) {
-                  if (pinSequence[j] == randomPin) {
-                    isDuplicate = true;
-                    break;  // Stop scanning, it's a duplicate!
-                  }
-                }
-              } while (isDuplicate);  // Reroll if it was a duplicate
-
-              // We found a unique pin! Save it and reset its physical position.
-              pinSequence[i] = randomPin;
-              pinYPositions[i] = PIN_REST_Y;
-              pinSet[i] = false;
-            }
-
-            // Generate 5 perfectly unique random pins out of thin air
+                        // Generate 5 perfectly unique random pins out of thin air
             for (int i = 0; i < NUM_PINS; i++) {
               int randomPin;
               bool isDuplicate;
@@ -301,9 +276,8 @@ int main(void) {
               pinYPositions[i] = PIN_REST_Y;
               pinSet[i] = false;
 
-              // --- THE NEW RANDOM HEIGHT GENERATOR ---
               // Generates a random target height between 60 and 90
-              pinTargetY[i] = 60 + (rand() % 31);
+              pinTargetY[i] = 70 + (rand() % 31);
             }
 
             currentSequenceIndex = 0;
@@ -384,8 +358,8 @@ int main(void) {
       if (isHoldingW) {
         // Lift the pin while holding W
         pinYPositions[currentPinIndex] -= 1;
-        if (pinYPositions[currentPinIndex] < 45)
-          pinYPositions[currentPinIndex] = 45;  // Ceiling
+        if (pinYPositions[currentPinIndex] < 65)
+          pinYPositions[currentPinIndex] = 65;  // Ceiling
       } else {
         // Gravity
         for (int i = 0; i < NUM_PINS; i++) {
@@ -573,6 +547,18 @@ void clearCharacter() {
 
 // Draws the static lock
 void drawStaticLock() {
+  // Declare the variables locally inside the function!
+  int lineThickness = 3;
+  int marginOffset = 3;  // <-- Capital 'O'
+
+  if (gameDifficulty == DIFF_MEDIUM) {
+    lineThickness = 2;
+    marginOffset = 2;
+  } else if (gameDifficulty == DIFF_HARD) {
+    lineThickness = 1;
+    marginOffset = 1;
+  }
+
   // Background for the entire screen
   drawRectangle(0, 0, 320, 240, COLOR_WOOD);
 
@@ -585,24 +571,15 @@ void drawStaticLock() {
   // Horizontal pick
   drawRectangle(20, 130, 280, 24, COLOR_BLACK);
 
-  int lineThickness = 3;
-  int marginOffset = 3;
-
-  if (gameDifficulty == DIFF_MEDIUM) {
-    lineThickness = 2;
-    marginOffset = 2;
-  } else if (gameDifficulty == DIFF_HARD) {
-    lineThickness = 1;
-    marginOffset = 1;
-  }
-
   // 5 pin chambers and their springs
   for (int i = 0; i < NUM_PINS; i++) {
     // Space them out evenly across the lock base
     int chamber_x = LOCK_BASE_X + 25 + (i * 32);
 
     // Draw the empty black chamber track extending upwards
-    drawRectangle(chamber_x, LOCK_BASE_Y + 10, CHAMBER_WIDTH, 80, COLOR_BLACK);
+    drawRectangle(chamber_x, LOCK_BASE_Y, CHAMBER_WIDTH, 90, COLOR_BLACK);
+    drawRectangle(chamber_x, pinTargetY[i] - marginOffset, CHAMBER_WIDTH,
+                  lineThickness, 0xF800);
   }
 }
 
@@ -679,6 +656,17 @@ void waitForRelease() {
 // Paints over the specific tracks to erase the old pick and springs
 // without having to redraw the heavy wood and brass background.
 void eraseDynamicElements() {
+  // Declare the variables locally inside the function!
+  int lineThickness = 3;
+  int marginOffset = 3;  // <-- Capital 'O'
+
+  if (gameDifficulty == DIFF_MEDIUM) {
+    lineThickness = 2;
+    marginOffset = 2;
+  } else if (gameDifficulty == DIFF_HARD) {
+    lineThickness = 1;
+    marginOffset = 1;
+  }
   // 1. Patch the wooden background on the far left (where the pick slides in)
   drawRectangle(0, 130, 20, 24, COLOR_WOOD);
 
@@ -688,7 +676,9 @@ void eraseDynamicElements() {
   // 3. Patch the vertical pin chambers
   for (int i = 0; i < NUM_PINS; i++) {
     int chamber_x = LOCK_BASE_X + 25 + (i * 32);
-    drawRectangle(chamber_x, LOCK_BASE_Y + 10, CHAMBER_WIDTH, 80, COLOR_BLACK);
+    drawRectangle(chamber_x, LOCK_BASE_Y, CHAMBER_WIDTH, 90, COLOR_BLACK);
+    drawRectangle(chamber_x, pinTargetY[i] - marginOffset, CHAMBER_WIDTH,
+                  lineThickness, 0xF800);
   }
 }
 
