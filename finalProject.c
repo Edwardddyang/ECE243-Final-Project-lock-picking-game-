@@ -114,10 +114,11 @@ void drawTimer();
 #define SHEAR_LINE_Y 75
 #define PIN_REST_Y 110
 
-//Game Design 
+// Game Design
 int currentPinIndex = 0;
-bool isHoldingW = false; //Tracks if pin is being held 
-bool pinSet[NUM_PINS] = {false, false, false, false, false};  // Tracks which pins are picked
+bool isHoldingW = false;  // Tracks if pin is being held
+bool pinSet[NUM_PINS] = {false, false, false, false,
+                         false};  // Tracks which pins are picked
 
 int main(void) {
   volatile int* pixel_ctrl_ptr = (int*)0xFF203020;
@@ -141,7 +142,7 @@ int main(void) {
 
   while (1) {
     if (state == MENU_STATE) {
-	  clearScreen(); 
+      clearScreen();
       drawMenu();
       updateLEDs(0);  // Clear LEDs in menu
       timerStarted = 0;
@@ -199,21 +200,26 @@ int main(void) {
         } else if (ignoreNext) {
           ignoreNext = false;
 
-          //Key released is W 
+          // Key released is W
           if (keyByte == (char)0x1D) {
             isHoldingW = false;
-            //Was W release it while the gap was on the line?
+            // Was W release it while the gap was on the line?
+            int margin = 3;
+            if (gameDifficulty == DIFF_MEDIUM)
+              margin = 2;
+            else if (gameDifficulty == DIFF_HARD)
+              margin = 1;
             if (!pinSet[currentPinIndex]) {
               // Margin of error: +/- 3 pixels from the perfect line
-              if (pinYPositions[currentPinIndex] >= SHEAR_LINE_Y - 3 &&
-                  pinYPositions[currentPinIndex] <= SHEAR_LINE_Y + 3) {
-                pinSet[currentPinIndex] = true;  //Update the lockpin as picked 
-                playSuccessSound();          
+              if (pinYPositions[currentPinIndex] >= SHEAR_LINE_Y - margin &&
+                  pinYPositions[currentPinIndex] <= SHEAR_LINE_Y + margin) {
+                pinSet[currentPinIndex] = true;  // Update the lockpin as picked
+                playSuccessSound();
               }
             }
           }
         } else {
-          //Key pressed 
+          // Key pressed
           if (keyByte == (char)0x1C && !isHoldingW) {
             if (currentPinIndex > 0) currentPinIndex--;  // Move lockpick Left
           } else if (keyByte == (char)0x23 && !isHoldingW) {
@@ -228,14 +234,14 @@ int main(void) {
         }
       }
 
-      // Game physics 
+      // Game physics
       if (isHoldingW) {
         // Lift the pin while holding W
         pinYPositions[currentPinIndex] -= 1;
         if (pinYPositions[currentPinIndex] < 45)
           pinYPositions[currentPinIndex] = 45;  // Ceiling
       } else {
-        //Gravity 
+        // Gravity
         for (int i = 0; i < NUM_PINS; i++) {
           if (!pinSet[i] && pinYPositions[i] < PIN_REST_Y) {
             pinYPositions[i] += 4;  // Fall fast
@@ -432,7 +438,19 @@ void drawStaticLock() {
   // Horizontal pick
   drawRectangle(20, 130, 280, 24, COLOR_BLACK);
 
-  drawRectangle(LOCK_BASE_X + 20, SHEAR_LINE_Y, LOCK_WIDTH - 40, 2, 0xF800);
+  int lineThickness = 3;
+  int marginOffset = 3;
+
+  if (gameDifficulty == DIFF_MEDIUM) {
+    lineThickness = 2;
+    marginOffset = 2;
+  } else if (gameDifficulty == DIFF_HARD) {
+    lineThickness = 1;
+    marginOffset = 1;
+  }
+
+  drawRectangle(LOCK_BASE_X + 20, SHEAR_LINE_Y - marginOffset, LOCK_WIDTH - 40,
+                lineThickness, 0xF800);
 
   // 5 pin chambers and their springs
   for (int i = 0; i < NUM_PINS; i++) {
@@ -449,19 +467,42 @@ void drawStaticLock() {
 // (resting down) int pick_x_position;           // Ranging from X=30 to X=200
 
 void drawDynamicElements() {
+  // --- DEFINE DIFFICULTY GAP PARAMETERS ---
+  // (We must recalculate these exactly as drawStaticLock does to ensure a
+  // perfect fit)
+  int marginOffset = 3;
+  if (gameDifficulty == DIFF_MEDIUM) {
+    marginOffset = 2;
+  } else if (gameDifficulty == DIFF_HARD) {
+    marginOffset = 1;
+  }
+
+  // Draw the dynamic pins at their current Y heights
   for (int i = 0; i < NUM_PINS; i++) {
     int pinX = LOCK_BASE_X + 25 + (i * 32);
     int currentY = pinYPositions[i];
 
     if (pinSet[i]) {
-      // PIN IS PICKED: Top driver pin stays at the shear line, bottom pin rests
-      drawRectangle(pinX + 2, SHEAR_LINE_Y - 20, CHAMBER_WIDTH - 4, 20,
-                    COLOR_GOLD);  // Top
-      drawRectangle(pinX + 2, PIN_REST_Y, CHAMBER_WIDTH - 4, 20,
-                    COLOR_GOLD);  // Bottom
+      // PIN IS SET: Draw the top and bottom pins with a fixed gap that
+      // perfectly encapsulates the red shear line's area.
+
+      // Standard fixed height for pin sections in picked state
+      int pinSectionHeight = 20;
+
+      // Top driver pin sits precisely on the TOP edge of the red line area
+      int topPinBottomEdge = SHEAR_LINE_Y - marginOffset;
+      drawRectangle(pinX + 2, topPinBottomEdge - pinSectionHeight,
+                    CHAMBER_WIDTH - 4, pinSectionHeight, COLOR_GOLD);
+
+      // Bottom key pin sits precisely on the BOTTOM edge of the red line area
+      int bottomPinTopEdge = SHEAR_LINE_Y + marginOffset;
+      drawRectangle(pinX + 2, bottomPinTopEdge, CHAMBER_WIDTH - 4,
+                    pinSectionHeight, COLOR_GOLD);
+
     } else {
-      // PIN IS UNPICKED: Top and bottom move together with a 2-pixel gap
-      // between them
+      // PIN IS UNPICKED: Keep the top and bottom pins moving together.
+      // (We keep the hardcoded small gap here so it doesn't look like they
+      // are 'set' prematurely.)
       drawRectangle(pinX + 2, currentY - 22, CHAMBER_WIDTH - 4, 20,
                     COLOR_GOLD);  // Top
       drawRectangle(pinX + 2, currentY, CHAMBER_WIDTH - 4, 20,
@@ -469,19 +510,22 @@ void drawDynamicElements() {
     }
   }
 
-  // Draw the lockpick shaft
+  // Draw the lockpick coming from the left edge of the screen
+  // (Shaft extends to current X position)
   drawRectangle(0, 142, pickXPosition, 4, COLOR_PICK);
 
-  // Draw the lockpick tip extending upwards to touch the bottom of the active
-  // pin
+  // Draw the pick tip extending upwards dynamically based on lifting state
   int tipTopY = 136;
   if (isHoldingW) {
-    tipTopY =
-        pinYPositions[currentPinIndex] + 20;  // Touch the bottom of the pin
+    tipTopY = pinYPositions[currentPinIndex] +
+              20;  // Touch the bottom of the pin while lifting
   }
-  drawRectangle(pickXPosition, tipTopY, 4, 142 - tipTopY,
-                COLOR_PICK);  // Dynamic height tip
-  drawRectangle(pickXPosition - 4, tipTopY, 4, 4, COLOR_PICK);  // The hook
+
+  // Draw the vertical part of the tip (dynamic height based on tipTopY)
+  drawRectangle(pickXPosition, tipTopY, 4, 142 - tipTopY, COLOR_PICK);
+
+  // Draw the small hook square facing left at the very top
+  drawRectangle(pickXPosition - 4, tipTopY, 4, 4, COLOR_PICK);
 }
 
 int readKeys() {
