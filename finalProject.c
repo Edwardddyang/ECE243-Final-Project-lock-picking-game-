@@ -97,6 +97,7 @@ void waitForRelease();
 // Audio
 void playStartSound();
 void playSuccessSound();
+void playFailSound();
 
 // Matching switches
 int readSwitches();
@@ -119,6 +120,9 @@ int currentPinIndex = 0;
 bool isHoldingW = false;  // Tracks if pin is being held
 bool pinSet[NUM_PINS] = {false, false, false, false,
                          false};  // Tracks which pins are picked
+int pinSequence[NUM_PINS];
+int currentSequenceIndex =
+    0;  // Tracks which step of the sequence the player is on
 
 int main(void) {
   volatile int* pixel_ctrl_ptr = (int*)0xFF203020;
@@ -168,11 +172,34 @@ int main(void) {
 
             clearCharacter();
 
+            srand(counter);
+
+            // Generate 5 perfectly unique random pins out of thin air
             for (int i = 0; i < NUM_PINS; i++) {
+              int randomPin;
+              bool isDuplicate;
+
+              // Keep rolling the dice until we get a pin we haven't seen yet!
+              do {
+                randomPin = rand() % NUM_PINS;
+                isDuplicate = false;
+
+                // Scan the pins we've already generated to check for a match
+                for (int j = 0; j < i; j++) {
+                  if (pinSequence[j] == randomPin) {
+                    isDuplicate = true;
+                    break;  // Stop scanning, it's a duplicate!
+                  }
+                }
+              } while (isDuplicate);  // Reroll if it was a duplicate
+
+              // We found a unique pin! Save it and reset its physical position.
+              pinSequence[i] = randomPin;
               pinYPositions[i] = PIN_REST_Y;
               pinSet[i] = false;
             }
 
+            currentSequenceIndex = 0;
             targetPattern = rand() & 0x1F;
             matchedPins = 0;
 
@@ -210,11 +237,24 @@ int main(void) {
             else if (gameDifficulty == DIFF_HARD)
               margin = 1;
             if (!pinSet[currentPinIndex]) {
-              // Margin of error: +/- 3 pixels from the perfect line
+              // Margin of error check (Did they hit the red line?)
               if (pinYPositions[currentPinIndex] >= SHEAR_LINE_Y - margin &&
                   pinYPositions[currentPinIndex] <= SHEAR_LINE_Y + margin) {
-                pinSet[currentPinIndex] = true;  // Update the lockpin as picked
-                playSuccessSound();
+                // --- THE SEQUENCE CHECK ---
+                if (currentPinIndex == pinSequence[currentSequenceIndex]) {
+                  // SUCCESS! They picked the correct pin in the order.
+                  pinSet[currentPinIndex] = true;
+                  currentSequenceIndex++;  // Move to the next required pin
+                  playSuccessSound();
+                } else {
+                  // SNAP! They picked the wrong pin!
+                  // Punishment: Drop every pin and reset their progress.
+                  for (int i = 0; i < NUM_PINS; i++) {
+                    pinSet[i] = false;
+                  }
+                  currentSequenceIndex = 0;
+                  playFailSound();  // Play a harsh buzz!
+                }
               }
             }
           }
@@ -730,6 +770,37 @@ void matchPins() {
   }
 
   //	updateLEDs(matchedPins);
+}
+
+void playFailSound() {
+  volatile int* audioPtr = (int*)AUDIO_BASE;
+  int sampleRate = 8000;
+  int volume = 0x00FFFFFF;
+
+  int freq = 150;  // Low, harsh buzz
+  int halfPeriod = sampleRate / freq / 2;
+  int duration = sampleRate / 3;  // Play for 0.33 seconds
+  int currentSample = 0;
+  int waveCounter = 0;
+  int currentAmplitude = volume;
+
+  while (currentSample < duration) {
+    int fifoSpace = *(audioPtr + 1);
+    int leftSpace = (fifoSpace >> 24) & 0xFF;
+    int rightSpace = (fifoSpace >> 16) & 0xFF;
+
+    if (leftSpace > 0 && rightSpace > 0) {
+      *(audioPtr + 2) = currentAmplitude;
+      *(audioPtr + 3) = currentAmplitude;
+      currentSample++;
+      waveCounter++;
+
+      if (waveCounter >= halfPeriod) {
+        currentAmplitude = -currentAmplitude;
+        waveCounter = 0;
+      }
+    }
+  }
 }
 
 // Timer functions
