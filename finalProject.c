@@ -283,22 +283,36 @@ int main(void)
       char keyByte;
       while (readPS2(&keyByte))
       {
-        if (keyByte == (char)0xF0)
+        if (keyByte == (char)0xE0)
+        {
+          extendedKey = true; // Arrow keys send an E0 byte first
+        }
+        else if (keyByte == (char)0xF0)
+        {
           ignoreNext = true; // Key release coming up
+        }
         else if (ignoreNext)
+        {
           ignoreNext = false; // Ignore key releases in the menu
+          extendedKey = false;
+        }
         else
         {
           // KEY PRESSED
-          if (keyByte == (char)0x1D)
+          bool isUp = (!extendedKey && keyByte == (char)0x1D) ||   // W
+                      (extendedKey && keyByte == (char)0x75);      // Up arrow
+          bool isDown = (!extendedKey && keyByte == (char)0x1B) || // S
+                        (extendedKey && keyByte == (char)0x72);    // Down arrow
+
+          extendedKey = false;
+
+          if (isUp)
           {
-            //'W' pressed
             if (menuSelection > 0)
               menuSelection--;
           }
-          else if (keyByte == (char)0x1B)
+          else if (isDown)
           {
-            //'S' pressed
             if (menuSelection < 2)
               menuSelection++;
           }
