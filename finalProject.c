@@ -1168,13 +1168,7 @@ void drawRotaryBar()
     rotary_in_range = true;
   }
 
-  int percent = 100 - (rotary_difference * 100 / 128);
-  if (percent < 0)
-    percent = 0;
-  if (percent > 100)
-    percent = 100;
-
-  int drawnBarWidth = (percent * barW) / 100;
+  int drawnBarWidth = barW - (rotary_difference * barW) / 255;
 
   short int bar_color = rotary_in_range ? 0x07E0 : 0xF800;
 
