@@ -133,7 +133,9 @@ void enable_interrupts(void); // enable interrupts
 void itimer_ISR(void);
 void drawTimer();
 
-#define SHEAR_LINE_Y 75
+#define PIN_REST_Y 110
+// Delete: #define SHEAR_LINE_Y 75
+int pinTargetY[NUM_PINS];  // Stores the unique red line height for each pin
 #define PIN_REST_Y 110
 
 // Game Design
@@ -148,9 +150,88 @@ int currentSequenceIndex =
 // ROTARY FUNCTIONS
 void drawRotaryBar();
 
-int main(void)
-{
-  volatile int *pixel_ctrl_ptr = (int *)0xFF203020;
+// --- AUDIO ENGINE GLOBALS ---
+int audioSamplesRemaining = 0;
+int audioCurrentFreq = 0;
+int audioWaveCounter = 0;
+int audioCurrentAmplitude = 0;
+int audioPhase = 0;  // Tracks the 3 parts of the "Ding Ding" success sound
+
+void triggerSuccessSound() {
+  // Start Phase 1: First Ding (2093 Hz for 0.1s)
+  audioSamplesRemaining = 8000 / 10;
+  audioCurrentFreq = 2093;
+  audioWaveCounter = 0;
+  audioCurrentAmplitude = 0x00FFFFFF;
+  audioPhase = 1;
+}
+
+void triggerFailSound() {
+  // Single Phase: Low Buzz (150 Hz for 0.33s)
+  audioSamplesRemaining = 8000 / 3;
+  audioCurrentFreq = 150;
+  audioWaveCounter = 0;
+  audioCurrentAmplitude = 0x00FFFFFF;
+  audioPhase = 0;
+}
+
+void updateAudio() {
+  // If a sound just finished, check if there's a next phase (for the Success
+  // Ding)
+  if (audioSamplesRemaining <= 0) {
+    if (audioPhase == 1) {
+      // Phase 2: Silence for 0.05s
+      audioSamplesRemaining = 8000 / 20;
+      audioCurrentFreq = 0;
+      audioPhase = 2;
+    } else if (audioPhase == 2) {
+      // Phase 3: Second Higher Ding (2637 Hz for 0.15s)
+      audioSamplesRemaining = (8000 * 15) / 100;
+      audioCurrentFreq = 2637;
+      audioCurrentAmplitude = 0x00FFFFFF;
+      audioWaveCounter = 0;
+      audioPhase = 3;
+    } else {
+      // Sound is completely finished
+      return;
+    }
+  }
+
+  volatile int* audioPtr = (int*)AUDIO_BASE;
+  int fifoSpace = *(audioPtr + 1);
+  int leftSpace = (fifoSpace >> 24) & 0xFF;
+  int rightSpace = (fifoSpace >> 16) & 0xFF;
+
+  // Find out exactly how much room the hardware has right now
+  int spaceToWrite = (leftSpace < rightSpace) ? leftSpace : rightSpace;
+
+  // Don't write more samples than the sound actually needs
+  if (spaceToWrite > audioSamplesRemaining) {
+    spaceToWrite = audioSamplesRemaining;
+  }
+
+  // Rapidly fill the available space and get out!
+  for (int i = 0; i < spaceToWrite; i++) {
+    if (audioCurrentFreq == 0) {
+      *(audioPtr + 2) = 0;  // Write Silence
+      *(audioPtr + 3) = 0;
+    } else {
+      *(audioPtr + 2) = audioCurrentAmplitude;  // Write Tone
+      *(audioPtr + 3) = audioCurrentAmplitude;
+
+      audioWaveCounter++;
+      int halfPeriod = 8000 / audioCurrentFreq / 2;
+      if (audioWaveCounter >= halfPeriod) {
+        audioCurrentAmplitude = -audioCurrentAmplitude;
+        audioWaveCounter = 0;
+      }
+    }
+    audioSamplesRemaining--;
+  }
+}
+
+int main(void) {
+  volatile int* pixel_ctrl_ptr = (int*)0xFF203020;
 
   // Initialization of the front and back buffers
   *(pixel_ctrl_ptr + 1) = (int)&buffer1;
@@ -211,33 +292,28 @@ int main(void)
 
             srand(counter);
 
-            // Generate 5 perfectly unique random pins out of thin air
-            for (int i = 0; i < NUM_PINS; i++)
-            {
+                        // Generate 5 perfectly unique random pins out of thin air
+            for (int i = 0; i < NUM_PINS; i++) {
               int randomPin;
               bool isDuplicate;
 
-              // Keep rolling the dice until we get a pin we haven't seen yet!
-              do
-              {
+              do {
                 randomPin = rand() % NUM_PINS;
                 isDuplicate = false;
-
-                // Scan the pins we've already generated to check for a match
-                for (int j = 0; j < i; j++)
-                {
-                  if (pinSequence[j] == randomPin)
-                  {
+                for (int j = 0; j < i; j++) {
+                  if (pinSequence[j] == randomPin) {
                     isDuplicate = true;
-                    break; // Stop scanning, it's a duplicate!
+                    break;
                   }
                 }
-              } while (isDuplicate); // Reroll if it was a duplicate
+              } while (isDuplicate);
 
-              // We found a unique pin! Save it and reset its physical position.
               pinSequence[i] = randomPin;
               pinYPositions[i] = PIN_REST_Y;
               pinSet[i] = false;
+
+              // Generates a random target height between 60 and 90
+              pinTargetY[i] = 70 + (rand() % 31);
             }
 
             currentSequenceIndex = 0;
@@ -295,30 +371,23 @@ int main(void)
               margin = 2;
             else if (gameDifficulty == DIFF_HARD)
               margin = 1;
-            if (!pinSet[currentPinIndex])
-            {
-              // Margin of error check (Did they hit the red line?)
-              if (pinYPositions[currentPinIndex] >= SHEAR_LINE_Y - margin &&
-                  pinYPositions[currentPinIndex] <= SHEAR_LINE_Y + margin)
-              {
+            if (!pinSet[currentPinIndex]) {
+              // Check against THIS specific pin's random target height!
+              if (pinYPositions[currentPinIndex] >=
+                      pinTargetY[currentPinIndex] - margin &&
+                  pinYPositions[currentPinIndex] <=
+                      pinTargetY[currentPinIndex] + margin) {
                 // --- THE SEQUENCE CHECK ---
-                if (currentPinIndex == pinSequence[currentSequenceIndex])
-                {
-                  // SUCCESS! They picked the correct pin in the order.
+                if (currentPinIndex == pinSequence[currentSequenceIndex]) {
                   pinSet[currentPinIndex] = true;
-                  currentSequenceIndex++; // Move to the next required pin
-                  playSuccessSound();
-                }
-                else
-                {
-                  // SNAP! They picked the wrong pin!
-                  // Punishment: Drop every pin and reset their progress.
-                  for (int i = 0; i < NUM_PINS; i++)
-                  {
+                  currentSequenceIndex++;
+                  triggerSuccessSound();
+                } else {
+                  for (int i = 0; i < NUM_PINS; i++) {
                     pinSet[i] = false;
                   }
                   currentSequenceIndex = 0;
-                  playFailSound(); // Play a harsh buzz!
+                  triggerFailSound();
                 }
               }
             }
@@ -355,8 +424,8 @@ int main(void)
         if (rotary_in_range)
         {
           pinYPositions[currentPinIndex] -= 1;
-          if (pinYPositions[currentPinIndex] < 45)
-            pinYPositions[currentPinIndex] = 45; // Ceiling
+        if (pinYPositions[currentPinIndex] < 65)
+          pinYPositions[currentPinIndex] = 65;  // Ceiling
         }
         else
         {
@@ -445,6 +514,7 @@ int main(void)
       }
     }
 
+    updateAudio();
     wait_for_vsync();
     pixel_buffer_start = *(pixel_ctrl_ptr + 1);
   }
@@ -593,8 +663,19 @@ void clearCharacter()
 }
 
 // Draws the static lock
-void drawStaticLock()
-{
+void drawStaticLock() {
+  // Declare the variables locally inside the function!
+  int lineThickness = 3;
+  int marginOffset = 3;  // <-- Capital 'O'
+
+  if (gameDifficulty == DIFF_MEDIUM) {
+    lineThickness = 2;
+    marginOffset = 2;
+  } else if (gameDifficulty == DIFF_HARD) {
+    lineThickness = 1;
+    marginOffset = 1;
+  }
+
   // Background for the entire screen
   drawRectangle(0, 0, 320, 240, COLOR_WOOD);
 
@@ -607,6 +688,23 @@ void drawStaticLock()
   // Horizontal pick
   drawRectangle(20, 130, 280, 24, COLOR_BLACK);
 
+  // 5 pin chambers and their springs
+  for (int i = 0; i < NUM_PINS; i++) {
+    // Space them out evenly across the lock base
+    int chamber_x = LOCK_BASE_X + 25 + (i * 32);
+
+    // Draw the empty black chamber track extending upwards
+    drawRectangle(chamber_x, LOCK_BASE_Y, CHAMBER_WIDTH, 90, COLOR_BLACK);
+    drawRectangle(chamber_x, pinTargetY[i] - marginOffset, CHAMBER_WIDTH,
+                  lineThickness, 0xF800);
+  }
+}
+
+// Assuming these variables are declared globally in the main game loop:
+// int pinYPosition[NUM_PINS]; // Ranging roughly from Y=90 (up) to Y=110
+// (resting down) int pick_x_position;           // Ranging from X=30 to X=200
+
+void drawDynamicElements() {
   int lineThickness = 3;
   int marginOffset = 3;
 
@@ -621,91 +719,45 @@ void drawStaticLock()
     marginOffset = 1;
   }
 
-  drawRectangle(LOCK_BASE_X + 20, SHEAR_LINE_Y - marginOffset, LOCK_WIDTH - 40,
-                lineThickness, 0xF800);
-
-  // 5 pin chambers and their springs
-  for (int i = 0; i < NUM_PINS; i++)
-  {
-    // Space them out evenly across the lock base
-    int chamber_x = LOCK_BASE_X + 25 + (i * 32);
-
-    // Draw the empty black chamber track extending upwards
-    drawRectangle(chamber_x, LOCK_BASE_Y + 10, CHAMBER_WIDTH, 80, COLOR_BLACK);
-  }
-}
-
-// Assuming these variables are declared globally in the main game loop:
-// int pinYPosition[NUM_PINS]; // Ranging roughly from Y=90 (up) to Y=110
-// (resting down) int pick_x_position;           // Ranging from X=30 to X=200
-
-void drawDynamicElements()
-{
-  // --- DEFINE DIFFICULTY GAP PARAMETERS ---
-  // (We must recalculate these exactly as drawStaticLock does to ensure a
-  // perfect fit)
-  int marginOffset = 3;
-  if (gameDifficulty == DIFF_MEDIUM)
-  {
-    marginOffset = 2;
-  }
-  else if (gameDifficulty == DIFF_HARD)
-  {
-    marginOffset = 1;
-  }
-
-  // Draw the dynamic pins at their current Y heights
-  for (int i = 0; i < NUM_PINS; i++)
-  {
+  for (int i = 0; i < NUM_PINS; i++) {
     int pinX = LOCK_BASE_X + 25 + (i * 32);
     int currentY = pinYPositions[i];
+    int targetY = pinTargetY[i];  // Grab this pin's specific target!
 
-    if (pinSet[i])
-    {
-      // PIN IS SET: Draw the top and bottom pins with a fixed gap that
-      // perfectly encapsulates the red shear line's area.
+    // 1. Draw the unique red line for this specific chamber
+    drawRectangle(pinX, targetY - marginOffset, CHAMBER_WIDTH, lineThickness,
+                  0xF800);
 
-      // Standard fixed height for pin sections in picked state
+    // 2. Draw the Pins
+    if (pinSet[i]) {
       int pinSectionHeight = 20;
 
-      // Top driver pin sits precisely on the TOP edge of the red line area
-      int topPinBottomEdge = SHEAR_LINE_Y - marginOffset;
+      // Top driver pin sits precisely on the TOP edge of this pin's red line
+      int topPinBottomEdge = targetY - marginOffset;
       drawRectangle(pinX + 2, topPinBottomEdge - pinSectionHeight,
                     CHAMBER_WIDTH - 4, pinSectionHeight, COLOR_GOLD);
 
-      // Bottom key pin sits precisely on the BOTTOM edge of the red line area
-      int bottomPinTopEdge = SHEAR_LINE_Y + marginOffset;
+      // Bottom key pin sits precisely on the BOTTOM edge
+      int bottomPinTopEdge = topPinBottomEdge + lineThickness;
       drawRectangle(pinX + 2, bottomPinTopEdge, CHAMBER_WIDTH - 4,
                     pinSectionHeight, COLOR_GOLD);
-    }
-    else
-    {
-      // PIN IS UNPICKED: Keep the top and bottom pins moving together.
-      // (We keep the hardcoded small gap here so it doesn't look like they
-      // are 'set' prematurely.)
-      drawRectangle(pinX + 2, currentY - 22, CHAMBER_WIDTH - 4, 20,
-                    COLOR_GOLD); // Top
-      drawRectangle(pinX + 2, currentY, CHAMBER_WIDTH - 4, 20,
-                    COLOR_GOLD); // Bottom
+
+    } else {
+      // PIN IS UNPICKED
+      drawRectangle(pinX + 2, currentY - 22, CHAMBER_WIDTH - 4, 20, COLOR_GOLD);
+      drawRectangle(pinX + 2, currentY, CHAMBER_WIDTH - 4, 20, COLOR_GOLD);
     }
   }
 
   // Draw the lockpick coming from the left edge of the screen
-  // (Shaft extends to current X position)
   drawRectangle(0, 142, pickXPosition, 4, COLOR_PICK);
 
-  // Draw the pick tip extending upwards dynamically based on lifting state
   int tipTopY = 136;
-  if (isHoldingW)
-  {
-    tipTopY = pinYPositions[currentPinIndex] +
-              20; // Touch the bottom of the pin while lifting
+  if (isHoldingW) {
+    tipTopY = pinYPositions[currentPinIndex] + 20;
   }
 
-  // Draw the vertical part of the tip (dynamic height based on tipTopY)
   drawRectangle(pickXPosition, tipTopY, 4, 142 - tipTopY, COLOR_PICK);
-
-  // Draw the small hook square facing left at the very top
   drawRectangle(pickXPosition - 4, tipTopY, 4, 4, COLOR_PICK);
 }
 
@@ -726,8 +778,18 @@ void waitForRelease()
 
 // Paints over the specific tracks to erase the old pick and springs
 // without having to redraw the heavy wood and brass background.
-void eraseDynamicElements()
-{
+void eraseDynamicElements() {
+  // Declare the variables locally inside the function!
+  int lineThickness = 3;
+  int marginOffset = 3;  // <-- Capital 'O'
+
+  if (gameDifficulty == DIFF_MEDIUM) {
+    lineThickness = 2;
+    marginOffset = 2;
+  } else if (gameDifficulty == DIFF_HARD) {
+    lineThickness = 1;
+    marginOffset = 1;
+  }
   // 1. Patch the wooden background on the far left (where the pick slides in)
   drawRectangle(0, 130, 20, 24, COLOR_WOOD);
 
@@ -738,7 +800,9 @@ void eraseDynamicElements()
   for (int i = 0; i < NUM_PINS; i++)
   {
     int chamber_x = LOCK_BASE_X + 25 + (i * 32);
-    drawRectangle(chamber_x, LOCK_BASE_Y + 10, CHAMBER_WIDTH, 80, COLOR_BLACK);
+    drawRectangle(chamber_x, LOCK_BASE_Y, CHAMBER_WIDTH, 90, COLOR_BLACK);
+    drawRectangle(chamber_x, pinTargetY[i] - marginOffset, CHAMBER_WIDTH,
+                  lineThickness, 0xF800);
   }
 }
 
@@ -1042,8 +1106,11 @@ void itimer_ISR(void)
   if (state == GAME_STATE && timerStarted == 1)
   {
     elapsedTime++;
-    rotary_counter --;
-    if (rotary_counter < 0) rotary_counter = 255;
+
+    if (rotary_in_range){
+      rotary_counter --;
+      if (rotary_counter < 0) rotary_counter = 255;
+    }
   }
 }
 
