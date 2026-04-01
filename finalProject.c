@@ -10369,12 +10369,16 @@ bool ignoreNext = false;  // A flag to catch the 0xF0 key-release byte
 bool moveLeft = false;
 bool moveRight = false;
 
-#define COLOR_WOOD 0x3186    // Dark brown
-#define COLOR_BRASS 0xD6A0   // Darker yellow/gold for housing
-#define COLOR_GOLD 0xFEA0    // Bright gold for the pins
-#define COLOR_BLACK 0x0000   // Empty space
-#define COLOR_SPRING 0x7BEF  // Silver/Grey for springs
-#define COLOR_PICK 0xCE79    // Dull steel for the lockpick
+#define COLOR_WOOD   0x3186   // Dark brown
+#define COLOR_BRASS  0xD6A0   // Darker yellow/gold for housing
+#define COLOR_GOLD   0xFEA0   // Bright gold for the pins
+#define COLOR_BLACK  0x0000   // Empty space
+#define COLOR_SPRING 0x7BEF   // Silver/Grey for springs
+#define COLOR_PICK   0xDEDB   // Light silver for the lockpick (matches screenshot)
+#define COLOR_PICK_SHADOW 0x8c51   // Dark red for shear line shadow
+#define COLOR_GREEN  0x07E0   // Bright green for set pins
+#define COLOR_RED    0xF800   // Red shear line
+#define COLOR_ORANGE 0xFC00   // Orange accent line lockpick
 
 // GLOBAL VARIABLES FOR SWITCH PATTERN
 int targetPattern = 0;
@@ -10419,6 +10423,8 @@ void drawStaticLock();
 void drawDynamicElements();
 int readPS2(char* byte);
 void eraseDynamicElements();
+void drawSpring(int chamberX); //draws spring coil in a chamber
+void drawPadlockIcon(int x, int y, short int bodyColor, short int shackleColor); // basic padlock image
 
 // State changing
 int readKeys();
@@ -10442,7 +10448,6 @@ void enable_interrupts(void);  // enable interrupts
 void itimer_ISR(void);
 void drawTimer();
 
-#define PIN_REST_Y 110
 // Delete: #define SHEAR_LINE_Y 75
 int pinTargetY[NUM_PINS];  // Stores the unique red line height for each pin
 #define PIN_REST_Y 110
@@ -10457,7 +10462,7 @@ int currentSequenceIndex =
     0;  // Tracks which step of the sequence the player is on
 
 // ROTARY FUNCTIONS
-void drawRotaryBar();
+void drawRotaryBar(); // draws tension bar and label, locks and control instruction
 
 // ps2 (for arrow keys) globals cant find other ones
 bool extendedKey = false;
@@ -10874,7 +10879,7 @@ void drawTimer() {
 
   // X = 68 (near the right edge of the 80-column grid)
   // Y = 2  (near the top of the 60-row grid)
-  writeString(68, 2, timeStr);
+  writeString(68, 4, timeStr);
 }
 
 // Writes character
@@ -10919,6 +10924,17 @@ void clearCharacter() {
   }
 }
 
+void drawSpring(int chamberX)
+{
+  // 6 alternating stripes: silver / dark-gray
+  for (int s = 0; s < 6; s++)
+  {
+    short int col = (s % 2 == 0) ? COLOR_SPRING : 0x4208; // silver / charcoal
+    drawRectangle(chamberX + 2, LOCK_BASE_Y + 2 + (s * 3),
+                  CHAMBER_WIDTH - 4, 2, col);
+  }
+}
+
 // // Draws the static lock
 // void drawStaticLock()
 // {
@@ -10937,39 +10953,72 @@ void clearCharacter() {
 //     marginOffset = 1;
 //   }
 
-/*New draw static lock*/
-void drawStaticLock() {
+//   // Background for the entire screen
+//   drawRectangle(0, 0, 320, 240, COLOR_WOOD);
+
+//   // Back plate
+//   drawRectangle(LOCK_BASE_X + 20, LOCK_BASE_Y - 20, LOCK_WIDTH - 40, 20,
+//                 COLOR_BRASS);
+//   // Heavy main body
+//   drawRectangle(LOCK_BASE_X, LOCK_BASE_Y, LOCK_WIDTH, LOCK_HEIGHT, COLOR_BRASS);
+
+//   // Horizontal pick
+//   drawRectangle(20, 130, 280, 24, COLOR_BLACK);
+
+//   // 5 pin chambers and their springs
+//   for (int i = 0; i < NUM_PINS; i++)
+//   {
+//     // Space them out evenly across the lock base
+//     int chamber_x = LOCK_BASE_X + 25 + (i * 32);
+
+//     // Draw the empty black chamber track extending upwards
+//     drawRectangle(chamber_x, LOCK_BASE_Y, CHAMBER_WIDTH, 90, COLOR_BLACK);
+//     drawRectangle(chamber_x, pinTargetY[i] - marginOffset, CHAMBER_WIDTH,
+//                   lineThickness, 0xF800);
+//   }
+// }
+
+void drawStaticLock()
+{
   int lineThickness = 3;
-  int marginOffset = 3;
-  if (gameDifficulty == DIFF_MEDIUM) {
-    lineThickness = 2;
-    marginOffset = 2;
-  } else if (gameDifficulty == DIFF_HARD) {
-    lineThickness = 1;
-    marginOffset = 1;
-  }
-
-  // Blit the pre-baked background in one shot
-  volatile short int* buf = (volatile short int*)pixel_buffer_start;
-  for (int i = 0; i < 320 * 240; i++) buf[i] = lock_background[i];
-
-  // Draw per-game shear lines on top (positions are randomized each game)
-  for (int i = 0; i < NUM_PINS; i++) {
+  int marginOffset  = 3;
+  if (gameDifficulty == DIFF_MEDIUM) { lineThickness = 2; marginOffset = 2; }
+  else if (gameDifficulty == DIFF_HARD) { lineThickness = 1; marginOffset = 1; }
+ 
+  // Wood-plank background
+    for (int y = 0; y < 240; y++)
+        for (int x = 0; x < 320; x++)
+            plot_pixel(x, y, lock_background[y * 320 + x]);
+     
+  // Back plate (top overhang of the lock body)
+  // drawRectangle(LOCK_BASE_X + 20, LOCK_BASE_Y - 20,
+  //               LOCK_WIDTH - 40, 20, COLOR_BRASS);
+ 
+  // // Main brass lock body
+  // drawRectangle(LOCK_BASE_X, LOCK_BASE_Y, LOCK_WIDTH, LOCK_HEIGHT, COLOR_BRASS);
+ 
+  // // Corner rivets on the body
+  // drawRectangle(LOCK_BASE_X + 8,               LOCK_BASE_Y + 8,               4, 4, COLOR_GOLD);
+  // drawRectangle(LOCK_BASE_X + LOCK_WIDTH - 12, LOCK_BASE_Y + 8,               4, 4, COLOR_GOLD);
+  // drawRectangle(LOCK_BASE_X + 8,               LOCK_BASE_Y + LOCK_HEIGHT - 12, 4, 4, COLOR_GOLD);
+  // drawRectangle(LOCK_BASE_X + LOCK_WIDTH - 12, LOCK_BASE_Y + LOCK_HEIGHT - 12, 4, 4, COLOR_GOLD);
+ 
+  // // Horizontal pick keyhole track
+  // drawRectangle(20, 130, 280, 24, COLOR_BLACK);
+ 
+  // 5 pin chambers with springs and per-game shear lines
+  for (int i = 0; i < NUM_PINS; i++)
+  {
     int cx = LOCK_BASE_X + 25 + (i * 32);
-    drawRectangle(cx, pinTargetY[i] - marginOffset, CHAMBER_WIDTH,
-                  lineThickness, 0xF800);
-    drawRectangle(cx, pinTargetY[i], CHAMBER_WIDTH, 1, 0xFC00);
-  }
-
-  // Background for the entire screen
-  drawRectangle(0, 0, 320, 240, COLOR_WOOD);
-
-  // Back plate
-  drawRectangle(LOCK_BASE_X + 20, LOCK_BASE_Y - 20, LOCK_WIDTH - 40, 20,
-                COLOR_BRASS);
-  // Heavy main body
-  drawRectangle(LOCK_BASE_X, LOCK_BASE_Y, LOCK_WIDTH, LOCK_HEIGHT, COLOR_BRASS);
-
+ 
+    // Black chamber track
+    drawRectangle(cx, LOCK_BASE_Y, CHAMBER_WIDTH, 90, COLOR_BLACK);
+ 
+    // Spring coil at top of chamber
+    drawSpring(cx);
+ 
+    // Red shear (target) line for this pin
+    drawRectangle(cx, pinTargetY[i] - marginOffset, CHAMBER_WIDTH, lineThickness, COLOR_RED);
   // Horizontal pick
   drawRectangle(20, 130, 280, 24, COLOR_BLACK);
 
@@ -10983,6 +11032,7 @@ void drawStaticLock() {
     drawRectangle(chamber_x, pinTargetY[i] - marginOffset, CHAMBER_WIDTH,
                   lineThickness, 0xF800);
   }
+}
 }
 
 // Assuming these variables are declared globally in the main game loop:
@@ -11009,37 +11059,55 @@ void drawDynamicElements() {
     // 1. Draw the unique red line for this specific chamber
     drawRectangle(pinX, targetY - marginOffset, CHAMBER_WIDTH, lineThickness,
                   0xF800);
+    drawSpring(pinX); // redraw spring every time to cover up any pin overlaps
 
     // 2. Draw the Pins
-    if (pinSet[i]) {
+    if (pinSet[i])
+    {
+      // Shear line turns GREEN to show this pin is picked
+      drawRectangle(pinX, targetY - marginOffset, CHAMBER_WIDTH, lineThickness, COLOR_GREEN);
+
       int pinSectionHeight = 20;
 
-      // Top driver pin sits precisely on the TOP edge of this pin's red line
+      // Driver pin: sits above the green shear line
       int topPinBottomEdge = targetY - marginOffset;
       drawRectangle(pinX + 2, topPinBottomEdge - pinSectionHeight,
                     CHAMBER_WIDTH - 4, pinSectionHeight, COLOR_GOLD);
 
-      // Bottom key pin sits precisely on the BOTTOM edge
+      // Key pin: sits below the shear line
       int bottomPinTopEdge = topPinBottomEdge + lineThickness;
-      drawRectangle(pinX + 2, bottomPinTopEdge, CHAMBER_WIDTH - 4,
-                    pinSectionHeight, COLOR_GOLD);
-    } else {
-      // PIN IS UNPICKED
-      drawRectangle(pinX + 2, currentY - 22, CHAMBER_WIDTH - 4, 20, COLOR_GOLD);
-      drawRectangle(pinX + 2, currentY, CHAMBER_WIDTH - 4, 20, COLOR_GOLD);
+      drawRectangle(pinX + 2, bottomPinTopEdge,
+                    CHAMBER_WIDTH - 4, pinSectionHeight, COLOR_GOLD);
     }
+    else
+    {
+      // pin is unpicked
+      // Red shear line remains
+      drawRectangle(pinX, targetY - marginOffset, CHAMBER_WIDTH, lineThickness, COLOR_RED);
+
+      // Driver pin (top half — above keyway gap)
+      drawRectangle(pinX + 2, currentY - 22, CHAMBER_WIDTH - 4, 20, COLOR_GOLD);
+
+      // Key pin (bottom half — below keyway gap)
+      drawRectangle(pinX + 2, currentY,      CHAMBER_WIDTH - 4, 20, COLOR_GOLD);
+     }
   }
+
 
   // Draw the lockpick coming from the left edge of the screen
   drawRectangle(0, 142, pickXPosition, 4, COLOR_PICK);
+  drawRectangle(0, 145, pickXPosition, 1, COLOR_PICK_SHADOW);
 
   int tipTopY = 136;
   if (isHoldingW) {
     tipTopY = pinYPositions[currentPinIndex] + 20;
+    if (tipTopY > 136)
+      tipTopY = 136; // dont go below rest
   }
 
   drawRectangle(pickXPosition, tipTopY, 4, 142 - tipTopY, COLOR_PICK);
   drawRectangle(pickXPosition - 4, tipTopY, 4, 4, COLOR_PICK);
+
 }
 
 int readKeys() {
@@ -11068,19 +11136,104 @@ void eraseDynamicElements() {
     lineThickness = 1;
     marginOffset = 1;
   }
-  // 1. Patch the wooden background on the far left (where the pick slides in)
-  drawRectangle(0, 130, 20, 24, COLOR_WOOD);
 
-  // 2. Patch the horizontal lockpick keyhole track
-  drawRectangle(20, 130, 280, 24, COLOR_BLACK);
+  // 1. Patch the horizontal lockpick keyhole track
+  drawRectangle(LOCK_BASE_X, 130, LOCK_WIDTH, 24, COLOR_BLACK);
 
-  // 3. Patch the vertical pin chambers
-  for (int i = 0; i < NUM_PINS; i++) {
+  // 2. Patch the vertical pin chambers
+  for (int i = 0; i < NUM_PINS; i++)
+  {
     int chamber_x = LOCK_BASE_X + 25 + (i * 32);
     drawRectangle(chamber_x, LOCK_BASE_Y, CHAMBER_WIDTH, 90, COLOR_BLACK);
     drawRectangle(chamber_x, pinTargetY[i] - marginOffset, CHAMBER_WIDTH,
                   lineThickness, 0xF800);
   }
+}
+
+void drawPadlockIcon(int x, int y, short int bodyColor, short int shackleColor)
+{
+  // Shackle arch (inverted U)
+  drawRectangle(x + 2, y, 2, 6, shackleColor); // left leg
+  drawRectangle(x + 6, y, 2, 6, shackleColor); // right leg
+  drawRectangle(x + 2, y, 6, 2, shackleColor); // top bar
+
+  // Body
+  drawRectangle(x, y + 5, 10, 7, bodyColor);
+
+  // Keyhole dot
+  drawRectangle(x + 4, y + 7, 2, 3, COLOR_BLACK);
+}
+
+void drawRotaryBar()
+{
+  // tension label
+  writeString(2, 52, "TENSION");
+
+  // padlock
+  // Spacing: 5 icons across, starting at x=90, y=200
+  int iconStartX = 90;
+  int iconY = 203;
+  int iconSpacing = 30;
+
+  for (int i = 0; i < NUM_PINS; i++)
+  {
+    int ix = iconStartX + (i * iconSpacing);
+
+    if (pinSet[i])
+    {
+      // Green padlock = this pin is locked in
+      drawPadlockIcon(ix, iconY, COLOR_GREEN, COLOR_GREEN);
+    }
+    else if (i == currentPinIndex)
+    {
+      // Gold/yellow = currently selected pin
+      drawPadlockIcon(ix, iconY, COLOR_GOLD, COLOR_SPRING);
+    }
+    else
+    {
+      // Dark gray = not yet picked
+      drawPadlockIcon(ix, iconY, 0x4208, 0x4208);
+    }
+  }
+
+  // tension bar
+  int barX = 20;
+  int barY = 218;
+  int barW = 280;
+  int barH = 5;
+
+  // Gray background track
+  drawRectangle(barX, barY, barW, barH, 0xAD55);
+
+  int rotary_difference;
+  if (rotary_counter > target_rotary_end)
+  {
+    rotary_difference = rotary_counter - target_rotary_end;
+    rotary_in_range   = false;
+  }
+  else if (rotary_counter < target_rotary_start)
+  {
+    rotary_difference = target_rotary_start - rotary_counter;
+    rotary_in_range   = false;
+  }
+  else
+  {
+    rotary_difference = 0;
+    rotary_in_range   = true;
+  }
+
+  int drawnBarWidth = barW - (rotary_difference * barW) / 255;
+  short int bar_color = rotary_in_range ? COLOR_GREEN : COLOR_RED;
+
+  if (drawnBarWidth > 0)
+    drawRectangle(barX, barY, drawnBarWidth, barH, bar_color);
+
+  // White indicator dot at the right edge of the drawn bar
+  if (drawnBarWidth > 2)
+    drawRectangle(barX + drawnBarWidth - 2, barY, 3, barH, 0xFFFF);
+
+  // control instructions
+  writeString(2, 58, "W:LIFT  A D:MOVE  C X:TURN");
 }
 
 // Reads a single byte from the PS/2 keyboard buffer
@@ -11376,39 +11529,4 @@ void rotary_ISR(void) {
 
   *LEDR_ptr = rotary_counter;
   JP1_EDGE = 0xFFFFFFFF;  // clear edge capture
-}
-
-void drawRotaryBar() {
-  int barX = 20;
-  int barY = 218;
-  int barW = 280;
-  int barH = 5;
-
-  drawRectangle(barX, barY, barW, barH,
-                0xAD55);  // grey bar (should always be visible)
-
-  // varibales used
-  // rotary_counter
-  // target_rotary_end
-  // target_rotary_start
-
-  int rotary_difference;
-
-  if (rotary_counter > target_rotary_end) {
-    rotary_difference = rotary_counter - target_rotary_end;
-    rotary_in_range = false;
-  } else if (rotary_counter < target_rotary_start) {
-    rotary_difference = target_rotary_start - rotary_counter;
-    rotary_in_range = false;
-  } else {  // if rotary is within the range
-    rotary_difference = 0;
-    rotary_in_range = true;
-  }
-
-  int drawnBarWidth = barW - (rotary_difference * barW) / 255;
-
-  short int bar_color = rotary_in_range ? 0x07E0 : 0xF800;
-
-  if (drawnBarWidth > 0)
-    drawRectangle(barX, barY, drawnBarWidth, barH, bar_color);  // red bar
 }
