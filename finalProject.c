@@ -26092,7 +26092,7 @@ const unsigned char successSound[] = {
     0x72, 0x2E, 0x54, 0x58, 0x58, 0x58, 0x00, 0x00, 0x00, 0x17, 0x00, 0x00,
     0x00, 0x53, 0x6F, 0x66, 0x74, 0x77, 0x61, 0x72, 0x65, 0x00, 0x4C, 0x61,
     0x76, 0x66, 0x36, 0x30, 0x2E, 0x31, 0x36, 0x2E, 0x31, 0x30, 0x30, 0x00};
-/*END OF BACKGROUND*/
+
 const unsigned char failSound[] = {
     0x52, 0x49, 0x46, 0x46, 0x0C, 0x51, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45,
     0x66, 0x6D, 0x74, 0x20, 0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
@@ -37608,8 +37608,8 @@ const unsigned char gameFail[] = {
 
 // Memory mapped addresses
 #define CHAR_BUFFER_BASE \
-  0x09000000  // Character buffer, acts as an overlay on top of the pixel
-              // buffer, 80col x 60row grid of character cells
+    0x09000000 // Character buffer, acts as an overlay on top of the pixel
+               // buffer, 80col x 60row grid of character cells
 #define KEY_BASE 0xFF200050
 #define PS2_BASE 0xFF200100
 #define AUDIO_BASE 0xFF203040
@@ -37617,16 +37617,16 @@ const unsigned char gameFail[] = {
 #define LED_BASE 0xFF200000
 #define TIMER_BASE 0xFF202000
 
-volatile int pixel_buffer_start;  // global variable
+volatile int pixel_buffer_start; // global variable
 short int buffer1[240][512];
 short int buffer2[240][512];
 
 // ROTARY
 #define ROTARY_BASE 0xFF200060
-#define JP1_MCAUSE 0x8000001B  // Machine External Interrupt (for rotary)
+#define JP1_MCAUSE 0x8000001B // Machine External Interrupt (for rotary)
 
-#define LEDR_ptr ((volatile int*)LED_BASE)
-#define rotary_ptr ((volatile int*)ROTARY_BASE)
+#define LEDR_ptr ((volatile int *)LED_BASE)
+#define rotary_ptr ((volatile int *)ROTARY_BASE)
 
 #define JP1_DATA (*(rotary_ptr))
 #define JP1_DIR (*(rotary_ptr + 1))
@@ -37650,23 +37650,32 @@ bool rotary_in_range = false;
 #define CHAMBER_WIDTH 16
 #define NUM_PINS 5
 int pinYPositions[NUM_PINS];
-int pickXPosition = 50;   // Starting X position of the lockpick
-bool ignoreNext = false;  // A flag to catch the 0xF0 key-release byte
+int pickXPosition = 50;  // Starting X position of the lockpick
+bool ignoreNext = false; // A flag to catch the 0xF0 key-release byte
 bool moveLeft = false;
 bool moveRight = false;
 
-#define COLOR_WOOD 0x3186    // Dark brown
-#define COLOR_BRASS 0xD6A0   // Darker yellow/gold for housing
-#define COLOR_GOLD 0xFEA0    // Bright gold for the pins
-#define COLOR_BLACK 0x0000   // Empty space
-#define COLOR_SPRING 0x7BEF  // Silver/Grey for springs
-#define COLOR_PICK 0xDEDB  // Light silver for the lockpick (matches screenshot)
-#define COLOR_PICK_SHADOW 0x8c51  // Dark red for shear line shadow
-#define COLOR_GREEN 0x07E0        // Bright green for set pins
-#define COLOR_RED 0xF800          // Red shear line
-#define COLOR_ORANGE 0xFC00       // Orange accent line lockpick
-#define COLOR_BORDER_GOLD 0xD502  // #d4a017 → RGB565, matches SVG gold border
-#define COLOR_BOX_BLUE 0x10a5     // dark blue, same as menu panel
+#define COLOR_WOOD 0x3186        // Dark brown
+#define COLOR_BRASS 0xD6A0       // Darker yellow/gold for housing
+#define COLOR_GOLD 0xFEA0        // Bright gold for the pins
+#define COLOR_BLACK 0x0000       // Empty space
+#define COLOR_SPRING 0x7BEF      // Silver/Grey for springs
+#define COLOR_PICK 0xDEDB        // Light silver for the lockpick (matches screenshot)
+#define COLOR_PICK_SHADOW 0x8c51 // Dark red for shear line shadow
+#define COLOR_GREEN 0x07E0       // Bright green for set pins
+#define COLOR_RED 0xF800         // Red shear line
+#define COLOR_ORANGE 0xFC00      // Orange accent line lockpick
+#define COLOR_BORDER_GOLD 0xD502 // #d4a017 → RGB565, matches SVG gold border
+#define COLOR_BOX_BLUE 0x10a5    // dark blue, same as menu panel
+#define COLOR_DARK_GREEN_FILL 0x1162
+#define COLOR_SELECTED_GREEN_FILL 0x19E3
+#define COLOR_GREEN_BORDER 0x3CC7
+#define COLOR_DARK_ORANGE_FILL 0x28E0
+#define COLOR_SELECTED_ORANGE_FILL 0x3120
+#define COLOR_ORANGE_BORDER 0xCC44
+#define COLOR_DARK_RED_FILL 0x2861
+#define COLOR_SELECTED_RED_FILL 0x30A1
+#define COLOR_RED_BORDER 0xC904
 
 // GLOBAL VARIABLES FOR SWITCH PATTERN
 int targetPattern = 0;
@@ -37674,7 +37683,7 @@ int matchedPins = 0;
 
 // GLOBAL VARIABLES FOR TIMER
 volatile int elapsedTime = 0;
-volatile int timerStarted = 0;  // 0 not started
+volatile int timerStarted = 0; // 0 not started
 
 // STATES
 #define MENU_STATE 0
@@ -37702,18 +37711,18 @@ void wait_for_vsync();
 
 // Drawing menu
 void writeCharacter(int x, int y, char c);
-void writeString(int x, int y, char* str);
+void writeString(int x, int y, char *str);
 void drawMenu();
 void drawEndScreen();
 
 // Drawing lock
 void drawStaticLock();
 void drawDynamicElements();
-int readPS2(char* byte);
+int readPS2(char *byte);
 void eraseDynamicElements();
-void drawSpring(int chamberX);  // draws spring coil in a chamber
+void drawSpring(int chamberX); // draws spring coil in a chamber
 void drawPadlockIcon(int x, int y, short int bodyColor,
-                     short int shackleColor);  // basic padlock image
+                     short int shackleColor); // basic padlock image
 
 // State changing
 int readKeys();
@@ -37727,32 +37736,32 @@ void playFailSound();
 // Matching switches
 int readSwitches();
 void updateLEDs(int lightLed);
-void matchPins();  // display the correct matched pins (in final game this would
-                   // not be dipslayed)
+void matchPins(); // display the correct matched pins (in final game this would
+                  // not be dipslayed)
 
 // Timer functions
 static void handler(void) __attribute__((interrupt("machine")));
-void set_itimer(void);         // initialize timer
-void enable_interrupts(void);  // enable interrupts
+void set_itimer(void);        // initialize timer
+void enable_interrupts(void); // enable interrupts
 void itimer_ISR(void);
 void drawTimer();
 
 // Delete: #define SHEAR_LINE_Y 75
-int pinTargetY[NUM_PINS];  // Stores the unique red line height for each pin
+int pinTargetY[NUM_PINS]; // Stores the unique red line height for each pin
 #define PIN_REST_Y 110
 
 // Game Design
 int currentPinIndex = 0;
-bool isHoldingW = false;  // Tracks if pin is being held
+bool isHoldingW = false; // Tracks if pin is being held
 bool pinSet[NUM_PINS] = {false, false, false, false,
-                         false};  // Tracks which pins are picked
+                         false}; // Tracks which pins are picked
 int pinSequence[NUM_PINS];
 int currentSequenceIndex =
-    0;  // Tracks which step of the sequence the player is on
+    0; // Tracks which step of the sequence the player is on
 
 // ROTARY FUNCTIONS
-void drawRotaryBar();  // draws tension bar and label, locks and control
-                       // instruction
+void drawRotaryBar(); // draws tension bar and label, locks and control
+                      // instruction
 
 // ps2 (for arrow keys) globals cant find other ones
 bool extendedKey = false;
@@ -37762,587 +37771,681 @@ int audioSamplesRemaining = 0;
 int audioCurrentFreq = 0;
 int audioWaveCounter = 0;
 int audioCurrentAmplitude = 0;
-int audioPhase = 0;  // Tracks the 3 parts of the "Ding Ding" success sound
+int audioPhase = 0; // Tracks the 3 parts of the "Ding Ding" success sound
 
 // --- REALISTIC AUDIO ENGINE GLOBALS ---
-const short int* currentAudioArray =
-    NULL;                  // Points to the sound currently playing
-int audioArrayLength = 0;  // Total size of the sound
-int audioPlayIndex = 0;    // Our current position in the sound
+const short int *currentAudioArray =
+    NULL;                 // Points to the sound currently playing
+int audioArrayLength = 0; // Total size of the sound
+int audioPlayIndex = 0;   // Our current position in the sound
 
-void triggerSuccessSound() {
-  currentAudioArray = (const short int*)(successSound + 44);
+void triggerSuccessSound()
+{
+    currentAudioArray = (const short int *)(successSound + 44);
 
-  // THE FIX: Subtract 44 for the header, divide by 2 for the 16-bit shift,
-  // and then subtract 500 samples from the tail to chop off the garbage
-  // metadata!
-  audioArrayLength = ((sizeof(successSound) - 44) / 2) - 200;
-  audioPlayIndex = 0;
+    // THE FIX: Subtract 44 for the header, divide by 2 for the 16-bit shift,
+    // and then subtract 500 samples from the tail to chop off the garbage
+    // metadata!
+    audioArrayLength = ((sizeof(successSound) - 44) / 2) - 200;
+    audioPlayIndex = 0;
 }
 
-void triggerFailSound() {
-  // 1. Skip the 44-byte WAV header
-  // 2. Cast the remaining 8-bit array into 16-bit audio samples!
-  currentAudioArray =
-      (const short int*)(failSound +
-                         44);  // <-- MAKE SURE THIS MATCHES YOUR ARRAY NAME
+void triggerFailSound()
+{
+    // 1. Skip the 44-byte WAV header
+    // 2. Cast the remaining 8-bit array into 16-bit audio samples!
+    currentAudioArray =
+        (const short int *)(failSound +
+                            44); // <-- MAKE SURE THIS MATCHES YOUR ARRAY NAME
 
-  // 3. Calculate the length and chop 500 samples off the tail to prevent
-  // metadata static
-  audioArrayLength = ((sizeof(failSound) - 44) / 2) - 200;
-  audioPlayIndex = 0;
+    // 3. Calculate the length and chop 500 samples off the tail to prevent
+    // metadata static
+    audioArrayLength = ((sizeof(failSound) - 44) / 2) - 200;
+    audioPlayIndex = 0;
 }
 
-void triggerVictorySound() {
-  // 1. Skip the 44-byte WAV header
-  // 2. Cast the remaining 8-bit array into 16-bit audio samples!
-  currentAudioArray = (const short int*)(gameVictory + 44);
+void triggerVictorySound()
+{
+    // 1. Skip the 44-byte WAV header
+    // 2. Cast the remaining 8-bit array into 16-bit audio samples!
+    currentAudioArray = (const short int *)(gameVictory + 44);
 
-  // 3. Calculate the length and chop 500 samples off the tail to prevent
-  // metadata static
-  audioArrayLength = ((sizeof(gameVictory) - 44) / 2) - 200;
-  audioPlayIndex = 0;
+    // 3. Calculate the length and chop 500 samples off the tail to prevent
+    // metadata static
+    audioArrayLength = ((sizeof(gameVictory) - 44) / 2) - 200;
+    audioPlayIndex = 0;
 }
 
-void triggerGameStart() {
-  // 1. Skip the 44-byte WAV header
-  // 2. Cast the remaining 8-bit array into 16-bit audio samples!
-  currentAudioArray = (const short int*)(gameStart + 44);
+void triggerGameStart()
+{
+    // 1. Skip the 44-byte WAV header
+    // 2. Cast the remaining 8-bit array into 16-bit audio samples!
+    currentAudioArray = (const short int *)(gameStart + 44);
 
-  // 3. Calculate the length and chop 500 samples off the tail to prevent
-  // metadata static
-  audioArrayLength = ((sizeof(gameStart) - 44) / 2) - 200;
-  audioPlayIndex = 0;
+    // 3. Calculate the length and chop 500 samples off the tail to prevent
+    // metadata static
+    audioArrayLength = ((sizeof(gameStart) - 44) / 2) - 200;
+    audioPlayIndex = 0;
 }
 
-void triggerGameFail() {
-  // 1. Skip the 44-byte WAV header
-  // 2. Cast the remaining 8-bit array into 16-bit audio samples!
-  currentAudioArray = (const short int*)(gameFail + 44);
+void triggerGameFail()
+{
+    // 1. Skip the 44-byte WAV header
+    // 2. Cast the remaining 8-bit array into 16-bit audio samples!
+    currentAudioArray = (const short int *)(gameFail + 44);
 
-  // 3. Calculate the length and chop 500 samples off the tail to prevent
-  // metadata static
-  audioArrayLength = ((sizeof(gameFail) - 44) / 2) - 200;
-  audioPlayIndex = 0;
+    // 3. Calculate the length and chop 500 samples off the tail to prevent
+    // metadata static
+    audioArrayLength = ((sizeof(gameFail) - 44) / 2) - 200;
+    audioPlayIndex = 0;
 }
 
 // Put this at the very top of your file!
-struct audio_t {
-  volatile unsigned int control;
-  volatile unsigned char rarc;
-  volatile unsigned char ralc;
-  volatile unsigned char warc;
-  volatile unsigned char walc;
-  volatile unsigned int ldata;
-  volatile unsigned int rdata;
+struct audio_t
+{
+    volatile unsigned int control;
+    volatile unsigned char rarc;
+    volatile unsigned char ralc;
+    volatile unsigned char warc;
+    volatile unsigned char walc;
+    volatile unsigned int ldata;
+    volatile unsigned int rdata;
 };
-struct audio_t* const audiop = ((struct audio_t*)0xff203040);
+struct audio_t *const audiop = ((struct audio_t *)0xff203040);
 
 // Your beautifully upgraded, non-blocking Streaming Engine:
-void updateAudio() {
-  if (currentAudioArray == NULL || audioPlayIndex >= audioArrayLength) {
-    return;
-  }
-
-  // Find out how much room the speakers have right now using the clean struct!
-  int leftSpace = audiop->walc;
-  int rightSpace = audiop->warc;
-  int spaceToWrite = (leftSpace < rightSpace) ? leftSpace : rightSpace;
-
-  // Rapidly feed the array into the hardware buffer without freezing the game
-  for (int i = 0; i < spaceToWrite; i++) {
-    if (audioPlayIndex >= audioArrayLength) {
-      currentAudioArray = NULL;
-      break;
+void updateAudio()
+{
+    if (currentAudioArray == NULL || audioPlayIndex >= audioArrayLength)
+    {
+        return;
     }
 
-    // Grab the 16-bit sample and amplify it
-    int loudSample = ((int)currentAudioArray[audioPlayIndex]) << 15;
+    // Find out how much room the speakers have right now using the clean struct!
+    int leftSpace = audiop->walc;
+    int rightSpace = audiop->warc;
+    int spaceToWrite = (leftSpace < rightSpace) ? leftSpace : rightSpace;
 
-    // Send it to the speakers using the clean struct!
-    audiop->ldata = loudSample;
-    audiop->rdata = loudSample;
+    // Rapidly feed the array into the hardware buffer without freezing the game
+    for (int i = 0; i < spaceToWrite; i++)
+    {
+        if (audioPlayIndex >= audioArrayLength)
+        {
+            currentAudioArray = NULL;
+            break;
+        }
 
-    audioPlayIndex++;
-  }
+        // Grab the 16-bit sample and amplify it
+        int loudSample = ((int)currentAudioArray[audioPlayIndex]) << 15;
+
+        // Send it to the speakers using the clean struct!
+        audiop->ldata = loudSample;
+        audiop->rdata = loudSample;
+
+        audioPlayIndex++;
+    }
 }
 
-int main(void) {
-  volatile int* pixel_ctrl_ptr = (int*)0xFF203020;
+int main(void)
+{
+    volatile int *pixel_ctrl_ptr = (int *)0xFF203020;
 
-  // Initialization of the front and back buffers
-  *(pixel_ctrl_ptr + 1) = (int)&buffer1;
-  wait_for_vsync();
-
-  pixel_buffer_start = *pixel_ctrl_ptr;
-  clearScreen();
-
-  *(pixel_ctrl_ptr + 1) = (int)&buffer2;
-  pixel_buffer_start = *(pixel_ctrl_ptr + 1);
-  clearScreen();
-  clearCharacter();
-
-  set_itimer();
-  enable_interrupts();
-
-  unsigned int counter = 0;
-
-  updateLEDs(0);  // Clear LEDs in menu
-
-  while (1) {
-    if (state == MENU_STATE) {
-      clearScreen();
-      drawMenu();
-      timerStarted = 0;
-      counter++;
-
-      char keyByte;
-      while (readPS2(&keyByte)) {
-        if (keyByte == (char)0xE0) {
-          extendedKey = true;  // Arrow keys send an E0 byte first
-        } else if (keyByte == (char)0xF0) {
-          ignoreNext = true;  // Key release coming up
-        } else if (ignoreNext) {
-          ignoreNext = false;  // Ignore key releases in the menu
-          extendedKey = false;
-        } else {
-          // KEY PRESSED
-          bool isUp = (!extendedKey && keyByte == (char)0x1D) ||    // W
-                      (extendedKey && keyByte == (char)0x75);       // Up arrow
-          bool isDown = (!extendedKey && keyByte == (char)0x1B) ||  // S
-                        (extendedKey && keyByte == (char)0x72);  // Down arrow
-
-          extendedKey = false;
-
-          if (isUp) {
-            if (menuSelection > 0) menuSelection--;
-          } else if (isDown) {
-            if (menuSelection < 2) menuSelection++;
-          } else if (keyByte == (char)0x5A) {
-            // Enter pressed, start the game with the selected difficulty
-            gameDifficulty = menuSelection;
-
-            clearCharacter();
-
-            srand(counter);
-
-            // Generate 5 perfectly unique random pins out of thin air
-            for (int i = 0; i < NUM_PINS; i++) {
-              int randomPin;
-              bool isDuplicate;
-
-              do {
-                randomPin = rand() % NUM_PINS;
-                isDuplicate = false;
-                for (int j = 0; j < i; j++) {
-                  if (pinSequence[j] == randomPin) {
-                    isDuplicate = true;
-                    break;
-                  }
-                }
-              } while (isDuplicate);
-
-              pinSequence[i] = randomPin;
-              pinYPositions[i] = PIN_REST_Y;
-              pinSet[i] = false;
-
-              // Generates a random target height between 60 and 90
-              pinTargetY[i] = 70 + (rand() % 31);
-            }
-
-            currentSequenceIndex = 0;
-            // targetPattern = rand() & 0x1F;
-            matchedPins = 0;
-
-            triggerGameStart();
-
-            elapsedTime = 0;
-            timerStarted = 1;
-
-            /*RANDOMIZE TARGET FOR ROTARY*/
-
-            // Randomize starting position, but keep it at least 30 away from
-            // the zone
-            do {
-              rotary_counter = rand() % 256;
-            } while (rotary_counter >= target_rotary_start - 30 &&
-                     rotary_counter <= target_rotary_end + 30);
-
-            /*END OF RANDOMIZE TARGET FOR ROTARY*/
-
-            // Draw the heavy lock to both buffers once
-            pixel_buffer_start = (int)&buffer1;
-            drawStaticLock();
-
-            pixel_buffer_start = (int)&buffer2;
-            drawStaticLock();
-
-            state = GAME_STATE;
-          }
-        }
-      }
-    } else if (state == GAME_STATE) {
-      char keyByte;
-      while (readPS2(&keyByte)) {
-        if (keyByte == (char)0xE0) {
-          extendedKey = true;
-        } else if (keyByte == (char)0xF0) {
-          ignoreNext = true;
-        } else if (ignoreNext) {
-          ignoreNext = false;
-          extendedKey = false;
-
-          // Key released is W or up arrow
-          if (keyByte == (char)0x1D || keyByte == (char)0x75) {
-            isHoldingW = false;
-            // Was W release it while the gap was on the line?
-            int margin = 3;
-            if (gameDifficulty == DIFF_MEDIUM)
-              margin = 2;
-            else if (gameDifficulty == DIFF_HARD)
-              margin = 1;
-            if (!pinSet[currentPinIndex]) {
-              // Check against THIS specific pin's random target height!
-              if (pinYPositions[currentPinIndex] >=
-                      pinTargetY[currentPinIndex] - margin &&
-                  pinYPositions[currentPinIndex] <=
-                      pinTargetY[currentPinIndex] + margin) {
-                // --- THE SEQUENCE CHECK ---
-                if (currentPinIndex == pinSequence[currentSequenceIndex]) {
-                  pinSet[currentPinIndex] = true;
-                  currentSequenceIndex++;
-                  if (currentSequenceIndex < NUM_PINS) {
-                    triggerSuccessSound();
-                  }
-                } else {
-                  for (int i = 0; i < NUM_PINS; i++) {
-                    pinSet[i] = false;
-                  }
-                  triggerFailSound();
-                  currentSequenceIndex = 0;
-                }
-              }
-            }
-          }
-        } else {
-          // Key pressed
-
-          // Key pressed
-          bool isLeft = (!extendedKey && keyByte == (char)0x1C) ||  // A
-                        (extendedKey && keyByte == (char)0x6B);  // Left arrow
-          bool isRight = (!extendedKey && keyByte == (char)0x23) ||  // D
-                         (extendedKey && keyByte == (char)0x74);  // Right arrow
-          bool isUp = (!extendedKey && keyByte == (char)0x1D) ||  // W
-                      (extendedKey && keyByte == (char)0x75);     // Up arrow
-
-          extendedKey = false;  // reset after use
-
-          if (isLeft && !isHoldingW) {
-            if (currentPinIndex > 0) currentPinIndex--;
-          } else if (isRight && !isHoldingW) {
-            if (currentPinIndex < NUM_PINS - 1) currentPinIndex++;
-          } else if (isUp) {
-            if (!pinSet[currentPinIndex] && rotary_in_range) {
-              isHoldingW = true;
-            }
-            // rotary keys
-          } else if (keyByte == (char)0x21) {  // C = clockwise
-            rotary_counter++;
-            if (rotary_counter > 255) rotary_counter = 0;
-            *LEDR_ptr = rotary_counter;
-          } else if (keyByte == (char)0x22) {  // X = counter-clockwise
-            rotary_counter--;
-            if (rotary_counter < 0) rotary_counter = 255;
-            *LEDR_ptr = rotary_counter;
-          }
-        }
-      }
-
-      // Game physics
-      if (isHoldingW) {
-        // Lift the pin while holding W
-        if (rotary_in_range) {
-          pinYPositions[currentPinIndex] -= 1;
-          if (pinYPositions[currentPinIndex] < 65)
-            pinYPositions[currentPinIndex] = 65;  // Ceiling
-        } else {
-          isHoldingW = false;  // If they move out of the rotary range while
-                               // lifting, drop the pin immediately
-        }
-      } else {
-        // Gravity
-        for (int i = 0; i < NUM_PINS; i++) {
-          if (!pinSet[i] && pinYPositions[i] < PIN_REST_Y) {
-            pinYPositions[i] += 4;  // Fall fast
-            if (pinYPositions[i] > PIN_REST_Y) pinYPositions[i] = PIN_REST_Y;
-          }
-        }
-      }
-
-      eraseDynamicElements();
-      updateAudio();
-
-      // Snap pick position
-      pickXPosition = LOCK_BASE_X + 32 + (currentPinIndex * 32);
-
-      drawDynamicElements();
-      updateAudio();
-
-      int maxTime = 180;
-      if (gameDifficulty == DIFF_MEDIUM) maxTime = 120;
-      if (gameDifficulty == DIFF_HARD) maxTime = 60;
-
-      int setTotal = 0;
-      for (int i = 0; i < NUM_PINS; i++) {
-        if (pinSet[i]) setTotal++;
-      }
-
-      if (setTotal == NUM_PINS) {
-        triggerVictorySound();
-        timerStarted = 0;
-        gameWon = true;
-        clearCharacter();
-
-        pixel_buffer_start = (int)&buffer1;
-        clearScreen();
-        drawEndScreen();
-
-        // Draw to Buffer 2
-        pixel_buffer_start = (int)&buffer2;
-        clearScreen();
-        drawEndScreen();
-
-        state = END_STATE;
-      } else if (elapsedTime >= maxTime) {
-        triggerGameFail(); 
-        timerStarted = 0;
-        gameWon = false;
-        clearCharacter();
-
-        /* Draw end screen into BOTH pixel buffers so neither buffer
-           shows a stale game frame after the next vsync swap */
-        pixel_buffer_start = (int)&buffer1;
-        clearScreen();
-        drawEndScreen();
-
-        pixel_buffer_start = (int)&buffer2;
-        clearScreen();
-        drawEndScreen();
-
-        state = END_STATE;
-
-      } else {
-        // Game is still actively running
-        // updateLEDs(elapsedTime);
-        drawTimer();
-        drawRotaryBar();
-      }
-    } else if (state == END_STATE) {
-      char keyByte;
-      while (readPS2(&keyByte)) {
-        if (keyByte == (char)0xF0) {
-          ignoreNext = true;
-        } else if (ignoreNext) {
-          ignoreNext = false;
-        } else if (keyByte == 0x5A) {
-          /* Enter — back to menu */
-          clearCharacter();
-          state = MENU_STATE;
-        }
-      }
-    }
-
-    updateAudio();
+    // Initialization of the front and back buffers
+    *(pixel_ctrl_ptr + 1) = (int)&buffer1;
     wait_for_vsync();
+
+    pixel_buffer_start = *pixel_ctrl_ptr;
+    clearScreen();
+
+    *(pixel_ctrl_ptr + 1) = (int)&buffer2;
     pixel_buffer_start = *(pixel_ctrl_ptr + 1);
-  }
+    clearScreen();
+    clearCharacter();
+
+    set_itimer();
+    enable_interrupts();
+
+    unsigned int counter = 0;
+
+    updateLEDs(0); // Clear LEDs in menu
+
+    while (1)
+    {
+        if (state == MENU_STATE)
+        {
+            clearScreen();
+            drawMenu();
+            timerStarted = 0;
+            counter++;
+
+            char keyByte;
+            while (readPS2(&keyByte))
+            {
+                if (keyByte == (char)0xE0)
+                {
+                    extendedKey = true; // Arrow keys send an E0 byte first
+                }
+                else if (keyByte == (char)0xF0)
+                {
+                    ignoreNext = true; // Key release coming up
+                }
+                else if (ignoreNext)
+                {
+                    ignoreNext = false; // Ignore key releases in the menu
+                    extendedKey = false;
+                }
+                else
+                {
+                    // KEY PRESSED
+                    bool isUp = (!extendedKey && keyByte == (char)0x1D) ||   // W
+                                (extendedKey && keyByte == (char)0x75);      // Up arrow
+                    bool isDown = (!extendedKey && keyByte == (char)0x1B) || // S
+                                  (extendedKey && keyByte == (char)0x72);    // Down arrow
+
+                    extendedKey = false;
+
+                    if (isUp)
+                    {
+                        if (menuSelection > 0)
+                            menuSelection--;
+                    }
+                    else if (isDown)
+                    {
+                        if (menuSelection < 2)
+                            menuSelection++;
+                    }
+                    else if (keyByte == (char)0x5A)
+                    {
+                        // Enter pressed, start the game with the selected difficulty
+                        gameDifficulty = menuSelection;
+
+                        clearCharacter();
+
+                        srand(counter);
+
+                        // Generate 5 perfectly unique random pins out of thin air
+                        for (int i = 0; i < NUM_PINS; i++)
+                        {
+                            int randomPin;
+                            bool isDuplicate;
+
+                            do
+                            {
+                                randomPin = rand() % NUM_PINS;
+                                isDuplicate = false;
+                                for (int j = 0; j < i; j++)
+                                {
+                                    if (pinSequence[j] == randomPin)
+                                    {
+                                        isDuplicate = true;
+                                        break;
+                                    }
+                                }
+                            } while (isDuplicate);
+
+                            pinSequence[i] = randomPin;
+                            pinYPositions[i] = PIN_REST_Y;
+                            pinSet[i] = false;
+
+                            // Generates a random target height between 60 and 90
+                            pinTargetY[i] = 70 + (rand() % 31);
+                        }
+
+                        currentSequenceIndex = 0;
+                        // targetPattern = rand() & 0x1F;
+                        matchedPins = 0;
+
+                        triggerGameStart();
+
+                        elapsedTime = 0;
+                        timerStarted = 1;
+
+                        /*RANDOMIZE TARGET FOR ROTARY*/
+
+                        // Randomize starting position, but keep it at least 30 away from
+                        // the zone
+                        do
+                        {
+                            rotary_counter = rand() % 256;
+                        } while (rotary_counter >= target_rotary_start - 30 &&
+                                 rotary_counter <= target_rotary_end + 30);
+
+                        /*END OF RANDOMIZE TARGET FOR ROTARY*/
+
+                        // Draw the heavy lock to both buffers once
+                        pixel_buffer_start = (int)&buffer1;
+                        drawStaticLock();
+
+                        pixel_buffer_start = (int)&buffer2;
+                        drawStaticLock();
+
+                        state = GAME_STATE;
+                    }
+                }
+            }
+        }
+        else if (state == GAME_STATE)
+        {
+            char keyByte;
+            while (readPS2(&keyByte))
+            {
+                if (keyByte == (char)0xE0)
+                {
+                    extendedKey = true;
+                }
+                else if (keyByte == (char)0xF0)
+                {
+                    ignoreNext = true;
+                }
+                else if (ignoreNext)
+                {
+                    ignoreNext = false;
+                    extendedKey = false;
+
+                    // Key released is W or up arrow
+                    if (keyByte == (char)0x1D || keyByte == (char)0x75)
+                    {
+                        isHoldingW = false;
+                        // Was W release it while the gap was on the line?
+                        int margin = 3;
+                        if (gameDifficulty == DIFF_MEDIUM)
+                            margin = 2;
+                        else if (gameDifficulty == DIFF_HARD)
+                            margin = 1;
+                        if (!pinSet[currentPinIndex])
+                        {
+                            // Check against THIS specific pin's random target height!
+                            if (pinYPositions[currentPinIndex] >=
+                                    pinTargetY[currentPinIndex] - margin &&
+                                pinYPositions[currentPinIndex] <=
+                                    pinTargetY[currentPinIndex] + margin)
+                            {
+                                // --- THE SEQUENCE CHECK ---
+                                if (currentPinIndex == pinSequence[currentSequenceIndex])
+                                {
+                                    pinSet[currentPinIndex] = true;
+                                    currentSequenceIndex++;
+                                    if (currentSequenceIndex < NUM_PINS)
+                                    {
+                                        triggerSuccessSound();
+                                    }
+                                }
+                                else
+                                {
+                                    for (int i = 0; i < NUM_PINS; i++)
+                                    {
+                                        pinSet[i] = false;
+                                    }
+                                    triggerFailSound();
+                                    currentSequenceIndex = 0;
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    // Key pressed
+
+                    // Key pressed
+                    bool isLeft = (!extendedKey && keyByte == (char)0x1C) ||  // A
+                                  (extendedKey && keyByte == (char)0x6B);     // Left arrow
+                    bool isRight = (!extendedKey && keyByte == (char)0x23) || // D
+                                   (extendedKey && keyByte == (char)0x74);    // Right arrow
+                    bool isUp = (!extendedKey && keyByte == (char)0x1D) ||    // W
+                                (extendedKey && keyByte == (char)0x75);       // Up arrow
+
+                    extendedKey = false; // reset after use
+
+                    if (isLeft && !isHoldingW)
+                    {
+                        if (currentPinIndex > 0)
+                            currentPinIndex--;
+                    }
+                    else if (isRight && !isHoldingW)
+                    {
+                        if (currentPinIndex < NUM_PINS - 1)
+                            currentPinIndex++;
+                    }
+                    else if (isUp)
+                    {
+                        if (!pinSet[currentPinIndex] && rotary_in_range)
+                        {
+                            isHoldingW = true;
+                        }
+                        // rotary keys
+                    }
+                    else if (keyByte == (char)0x21)
+                    { // C = clockwise
+                        rotary_counter++;
+                        if (rotary_counter > 255)
+                            rotary_counter = 0;
+                        *LEDR_ptr = rotary_counter;
+                    }
+                    else if (keyByte == (char)0x22)
+                    { // X = counter-clockwise
+                        rotary_counter--;
+                        if (rotary_counter < 0)
+                            rotary_counter = 255;
+                        *LEDR_ptr = rotary_counter;
+                    }
+                }
+            }
+
+            // Game physics
+            if (isHoldingW)
+            {
+                // Lift the pin while holding W
+                if (rotary_in_range)
+                {
+                    pinYPositions[currentPinIndex] -= 1;
+                    if (pinYPositions[currentPinIndex] < 65)
+                        pinYPositions[currentPinIndex] = 65; // Ceiling
+                }
+                else
+                {
+                    isHoldingW = false; // If they move out of the rotary range while
+                                        // lifting, drop the pin immediately
+                }
+            }
+            else
+            {
+                // Gravity
+                for (int i = 0; i < NUM_PINS; i++)
+                {
+                    if (!pinSet[i] && pinYPositions[i] < PIN_REST_Y)
+                    {
+                        pinYPositions[i] += 4; // Fall fast
+                        if (pinYPositions[i] > PIN_REST_Y)
+                            pinYPositions[i] = PIN_REST_Y;
+                    }
+                }
+            }
+
+            eraseDynamicElements();
+            updateAudio();
+
+            // Snap pick position
+            pickXPosition = LOCK_BASE_X + 32 + (currentPinIndex * 32);
+
+            drawDynamicElements();
+            updateAudio();
+
+            int maxTime = 180;
+            if (gameDifficulty == DIFF_MEDIUM)
+                maxTime = 120;
+            if (gameDifficulty == DIFF_HARD)
+                maxTime = 60;
+
+            int setTotal = 0;
+            for (int i = 0; i < NUM_PINS; i++)
+            {
+                if (pinSet[i])
+                    setTotal++;
+            }
+
+            if (setTotal == NUM_PINS)
+            {
+                triggerVictorySound();
+                timerStarted = 0;
+                gameWon = true;
+                clearCharacter();
+
+                pixel_buffer_start = (int)&buffer1;
+                clearScreen();
+                drawEndScreen();
+
+                // Draw to Buffer 2
+                pixel_buffer_start = (int)&buffer2;
+                clearScreen();
+                drawEndScreen();
+
+                state = END_STATE;
+            }
+            else if (elapsedTime >= maxTime)
+            {
+                triggerGameFail();
+                timerStarted = 0;
+                gameWon = false;
+                clearCharacter();
+
+                /* Draw end screen into BOTH pixel buffers so neither buffer
+                   shows a stale game frame after the next vsync swap */
+                pixel_buffer_start = (int)&buffer1;
+                clearScreen();
+                drawEndScreen();
+
+                pixel_buffer_start = (int)&buffer2;
+                clearScreen();
+                drawEndScreen();
+
+                state = END_STATE;
+            }
+            else
+            {
+                // Game is still actively running
+                // updateLEDs(elapsedTime);
+                drawTimer();
+                drawRotaryBar();
+            }
+        }
+        else if (state == END_STATE)
+        {
+            char keyByte;
+            while (readPS2(&keyByte))
+            {
+                if (keyByte == (char)0xF0)
+                {
+                    ignoreNext = true;
+                }
+                else if (ignoreNext)
+                {
+                    ignoreNext = false;
+                }
+                else if (keyByte == 0x5A)
+                {
+                    /* Enter — back to menu */
+                    clearCharacter();
+                    state = MENU_STATE;
+                }
+            }
+        }
+
+        updateAudio();
+        wait_for_vsync();
+        pixel_buffer_start = *(pixel_ctrl_ptr + 1);
+    }
 }
 
-void drawMenu() {
-  for (int y = 0; y < 240; y++)
-    for (int x = 0; x < 320; x++) plot_pixel(x, y, main_menu_bg[y * 320 + x]);
+void drawMenu()
+{
+    for (int y = 0; y < 240; y++)
+        for (int x = 0; x < 320; x++)
+            plot_pixel(x, y, main_menu_bg[y * 320 + x]);
 
-  writeString(30, 3, "WELCOME TO LOCK PICK");
+    writeString(20, 3, "WELCOME TO LOCK PICK");
 
-  int boxX = 168; /* left edge of all three boxes          */
-  int boxW = 146; /* width                                 */
-  int boxH = 42;  /* height                                */
-  int bdr = 2;    /* border thickness                      */
-  int yEasy = 72;
-  int yMed = 122;
-  int yHard = 172;
+    int boxX = 168;
+    int boxW = 146;
+    int boxH = 42;
+    int bdr = 2;
+    int yEasy = 52;
+    int yMed = 102;
+    int yHard = 152;
 
-  /* ── Color definitions (RGB565) ──────────────────────────────
-   *   #152e15 dark green fill  → R5=2  G6=11 B5=2  → 0x1162
-   *   #3a9a3a green border     → R5=7  G6=38 B5=7  → 0x3CC7
-   *   #2c1e06 dark amber fill  → R5=5  G6=7  B5=0  → 0x28E0
-   *   #cc8822 amber border     → R5=25 G6=34 B5=4  → 0xCC44
-   *   #280e0e dark red fill    → R5=5  G6=3  B5=1  → 0x2861
-   *   #cc2222 red border       → R5=25 G6=8  B5=4  → 0xC904
-   * ────────────────────────────────────────────────────────── */
+    short int easyFill = (menuSelection == DIFF_EASY) ? COLOR_SELECTED_GREEN_FILL : COLOR_DARK_GREEN_FILL;
+    short int medFill = (menuSelection == DIFF_MEDIUM) ? COLOR_SELECTED_ORANGE_FILL : COLOR_DARK_ORANGE_FILL;
+    short int hardFill = (menuSelection == DIFF_HARD) ? COLOR_SELECTED_RED_FILL : COLOR_DARK_RED_FILL;
 
-  /* Slightly brighter selected fill (adds ~0x0841 brightness) */
-  short int easyFill = (menuSelection == DIFF_EASY) ? 0x19E3 : 0x1162;
-  short int medFill = (menuSelection == DIFF_MEDIUM) ? 0x3120 : 0x28E0;
-  short int hardFill = (menuSelection == DIFF_HARD) ? 0x30A1 : 0x2861;
+    drawRectangle(boxX, yEasy, boxW, boxH, easyFill);
+    drawRectangle(boxX, yEasy, boxW, bdr, COLOR_GREEN_BORDER);       
+    drawRectangle(boxX, yEasy + boxH - bdr, boxW, bdr, COLOR_GREEN_BORDER); 
+    drawRectangle(boxX, yEasy, bdr, boxH, COLOR_GREEN_BORDER);       
+    drawRectangle(boxX + boxW - bdr, yEasy, bdr, boxH, COLOR_GREEN_BORDER); 
+    writeString(57, 17, "EASY");
 
-  short int easyBorder = 0x3CC7;
-  short int medBorder = 0xCC44;
-  short int hardBorder = 0xC904;
+    drawRectangle(boxX, yMed, boxW, boxH, medFill);
+    drawRectangle(boxX, yMed, boxW, bdr, COLOR_ORANGE_BORDER);
+    drawRectangle(boxX, yMed + boxH - bdr, boxW, bdr, COLOR_ORANGE_BORDER);
+    drawRectangle(boxX, yMed, bdr, boxH, COLOR_ORANGE_BORDER);
+    drawRectangle(boxX + boxW - bdr, yMed, bdr, boxH, COLOR_ORANGE_BORDER);
+    writeString(56, 29, "MEDIUM");
 
-  /* ── EASY box ─────────────────────────────────────────────── */
-  drawRectangle(boxX, yEasy, boxW, boxH, easyFill);
-  drawRectangle(boxX, yEasy, boxW, bdr, easyBorder);              /* top    */
-  drawRectangle(boxX, yEasy + boxH - bdr, boxW, bdr, easyBorder); /* bottom */
-  drawRectangle(boxX, yEasy, bdr, boxH, easyBorder);              /* left   */
-  drawRectangle(boxX + boxW - bdr, yEasy, bdr, boxH, easyBorder); /* right  */
-  /* Text — col 58 = px 232, row 22 = px 88  (centered in box) */
-  writeString(58, 22, "EASY");
+    drawRectangle(boxX, yHard, boxW, boxH, hardFill);
+    drawRectangle(boxX, yHard, boxW, bdr, COLOR_RED_BORDER);
+    drawRectangle(boxX, yHard + boxH - bdr, boxW, bdr, COLOR_RED_BORDER);
+    drawRectangle(boxX, yHard, bdr, boxH, COLOR_RED_BORDER);
+    drawRectangle(boxX + boxW - bdr, yHard, bdr, boxH, COLOR_RED_BORDER);
+    writeString(57, 42, "HARD");
 
-  /* ── MEDIUM box ───────────────────────────────────────────── */
-  drawRectangle(boxX, yMed, boxW, boxH, medFill);
-  drawRectangle(boxX, yMed, boxW, bdr, medBorder);
-  drawRectangle(boxX, yMed + boxH - bdr, boxW, bdr, medBorder);
-  drawRectangle(boxX, yMed, bdr, boxH, medBorder);
-  drawRectangle(boxX + boxW - bdr, yMed, bdr, boxH, medBorder);
-  writeString(57, 34, "MEDIUM");
+    int arrowX = boxX - 13;
+    int arrowY;
+    if (menuSelection == DIFF_EASY)
+        arrowY = yEasy + 16;
+    else if (menuSelection == DIFF_MEDIUM)
+        arrowY = yMed + 16;
+    else
+        arrowY = yHard + 16;
 
-  /* ── HARD box ─────────────────────────────────────────────── */
-  drawRectangle(boxX, yHard, boxW, boxH, hardFill);
-  drawRectangle(boxX, yHard, boxW, bdr, hardBorder);
-  drawRectangle(boxX, yHard + boxH - bdr, boxW, bdr, hardBorder);
-  drawRectangle(boxX, yHard, bdr, boxH, hardBorder);
-  drawRectangle(boxX + boxW - bdr, yHard, bdr, boxH, hardBorder);
-  writeString(56, 48, "RUTHLESS");
-
-  int arrowX = boxX - 13;
-  int arrowY;
-  if (menuSelection == DIFF_EASY)
-    arrowY = yEasy + 16;
-  else if (menuSelection == DIFF_MEDIUM)
-    arrowY = yMed + 16;
-  else
-    arrowY = yHard + 16;
-
-  /* Leftmost column = full height; each column narrows by 1 top & bottom */
-  drawRectangle(arrowX, arrowY, 2, 10, COLOR_BORDER_GOLD);
-  drawRectangle(arrowX + 2, arrowY + 1, 2, 8, COLOR_BORDER_GOLD);
-  drawRectangle(arrowX + 4, arrowY + 2, 2, 6, COLOR_BORDER_GOLD);
-  drawRectangle(arrowX + 6, arrowY + 3, 2, 4, COLOR_BORDER_GOLD);
-  drawRectangle(arrowX + 8, arrowY + 4, 2, 2, COLOR_BORDER_GOLD);
+    drawRectangle(arrowX, arrowY, 2, 10, COLOR_BORDER_GOLD);
+    drawRectangle(arrowX + 2, arrowY + 1, 2, 8, COLOR_BORDER_GOLD);
+    drawRectangle(arrowX + 4, arrowY + 2, 2, 6, COLOR_BORDER_GOLD);
+    drawRectangle(arrowX + 6, arrowY + 3, 2, 4, COLOR_BORDER_GOLD);
+    drawRectangle(arrowX + 8, arrowY + 4, 2, 2, COLOR_BORDER_GOLD);
 }
 
-void drawEndScreen() {
-  for (int y = 0; y < 240; y++)
-    for (int x = 0; x < 320; x++) plot_pixel(x, y, brick_bg[y * 320 + x]);
+void drawEndScreen()
+{
+    for (int y = 0; y < 240; y++)
+        for (int x = 0; x < 320; x++)
+            plot_pixel(x, y, brick_bg[y * 320 + x]);
 
-  int boxX = 40;
-  int boxY = 72;
-  int boxW = 240;
-  int boxH = 96;
-  int bdr = 3;
+    int boxX = 40;
+    int boxY = 72;
+    int boxW = 240;
+    int boxH = 96;
+    int bdr = 3;
 
-  drawRectangle(boxX, boxY, boxW, boxH, COLOR_BOX_BLUE);
+    drawRectangle(boxX, boxY, boxW, boxH, COLOR_BOX_BLUE);
 
-  drawRectangle(boxX, boxY, boxW, bdr, COLOR_BORDER_GOLD); /* top    */
-  drawRectangle(boxX, boxY + boxH - bdr, boxW, bdr,
-                COLOR_BORDER_GOLD);                        /* bottom */
-  drawRectangle(boxX, boxY, bdr, boxH, COLOR_BORDER_GOLD); /* left   */
-  drawRectangle(boxX + boxW - bdr, boxY, bdr, boxH,
-                COLOR_BORDER_GOLD); /* right  */
+    drawRectangle(boxX, boxY, boxW, bdr, COLOR_BORDER_GOLD); /* top    */
+    drawRectangle(boxX, boxY + boxH - bdr, boxW, bdr,
+                  COLOR_BORDER_GOLD);                        /* bottom */
+    drawRectangle(boxX, boxY, bdr, boxH, COLOR_BORDER_GOLD); /* left   */
+    drawRectangle(boxX + boxW - bdr, boxY, bdr, boxH,
+                  COLOR_BORDER_GOLD); /* right  */
 
-  if (gameWon) {
-    writeString(33, 25, "LOCK UNLOCKED!");
+    if (gameWon)
+    {
+        writeString(33, 25, "LOCK UNLOCKED!");
 
-    char timeMsg[24];
-    snprintf(timeMsg, sizeof(timeMsg), "TIME TAKEN: %03d SEC", elapsedTime);
-    writeString(31, 29, timeMsg);
+        char timeMsg[24];
+        snprintf(timeMsg, sizeof(timeMsg), "TIME TAKEN: %03d SEC", elapsedTime);
+        writeString(31, 29, timeMsg);
 
-    writeString(29, 33, "PRESS ENTER TO RESTART");
-  } else {
-    writeString(35, 24, "TIME'S UP!");
+        writeString(29, 33, "PRESS ENTER TO RESTART");
+    }
+    else
+    {
+        writeString(35, 24, "TIME'S UP!");
 
-    writeString(31, 28, "YOU FAILED TO PICK");
-    writeString(36, 30, "THE LOCK");
+        writeString(31, 28, "YOU FAILED TO PICK");
+        writeString(36, 30, "THE LOCK");
 
-    writeString(29, 34, "PRESS ENTER TO RESTART");
-  }
+        writeString(29, 34, "PRESS ENTER TO RESTART");
+    }
 }
 
 // Clears the entire screen black at the start
-void clearScreen() {
-  int x = 320;
-  int y = 240;
-  for (int i = 0; i < x; i++) {
-    for (int j = 0; j < y; j++) {
-      plot_pixel(i, j, 0x0000);
+void clearScreen()
+{
+    int x = 320;
+    int y = 240;
+    for (int i = 0; i < x; i++)
+    {
+        for (int j = 0; j < y; j++)
+        {
+            plot_pixel(i, j, 0x0000);
+        }
     }
-  }
 }
 
 // Formats the elapsed time and prints it to the top right of the character
 // buffer
-void drawTimer() {
-  char timeStr[20];
+void drawTimer()
+{
+    char timeStr[20];
 
-  // Format the string. "%03d" ensures it always takes up 3 digits (e.g., 001,
-  // 015, 120)
-  snprintf(timeStr, sizeof(timeStr), "TIME: %03d", elapsedTime);
+    // Format the string. "%03d" ensures it always takes up 3 digits (e.g., 001,
+    // 015, 120)
+    snprintf(timeStr, sizeof(timeStr), "TIME: %03d", elapsedTime);
 
-  // X = 68 (near the right edge of the 80-column grid)
-  // Y = 2  (near the top of the 60-row grid)
-  writeString(68, 4, timeStr);
+    // X = 68 (near the right edge of the 80-column grid)
+    // Y = 2  (near the top of the 60-row grid)
+    writeString(68, 4, timeStr);
 }
 
 // Writes character
-void writeCharacter(int x, int y, char c) {
-  // Character buffer addressing shifts y by 7 (multiplying by 128)
-  volatile char* character_buffer = (char*)(CHAR_BUFFER_BASE + (y << 7) + x);
-  *character_buffer = c;
+void writeCharacter(int x, int y, char c)
+{
+    // Character buffer addressing shifts y by 7 (multiplying by 128)
+    volatile char *character_buffer = (char *)(CHAR_BUFFER_BASE + (y << 7) + x);
+    *character_buffer = c;
 }
 
 // Iterates through str and writes each character out horizontally
-void writeString(int x, int y, char* str) {
-  int i = 0;
-  while (str[i] != '\0') {
-    writeCharacter(x + i, y, str[i]);
-    i++;
-  }
+void writeString(int x, int y, char *str)
+{
+    int i = 0;
+    while (str[i] != '\0')
+    {
+        writeCharacter(x + i, y, str[i]);
+        i++;
+    }
 }
 
 // Draws rectangle with height & width at starting position (x0, y0)
-void drawRectangle(int x0, int y0, int width, int height, short int color) {
-  for (int x = x0; x < x0 + width; x++) {
-    for (int y = y0; y < y0 + height; y++) {
-      plot_pixel(x, y, color);
+void drawRectangle(int x0, int y0, int width, int height, short int color)
+{
+    for (int x = x0; x < x0 + width; x++)
+    {
+        for (int y = y0; y < y0 + height; y++)
+        {
+            plot_pixel(x, y, color);
+        }
     }
-  }
 }
 
 // Plots pixel
-void plot_pixel(int x, int y, short int line_color) {
-  volatile short int* one_pixel_address;
-  one_pixel_address = pixel_buffer_start + (y << 10) + (x << 1);
-  *one_pixel_address = line_color;
+void plot_pixel(int x, int y, short int line_color)
+{
+    volatile short int *one_pixel_address;
+    one_pixel_address = pixel_buffer_start + (y << 10) + (x << 1);
+    *one_pixel_address = line_color;
 }
 
 // Since character buffer overlays the pixel buffer, must clear characters
 // alongside pixels Draws ' ' on all character cells in the character grid
-void clearCharacter() {
-  for (int x = 0; x < 80; x++) {
-    for (int y = 0; y < 60; y++) {
-      writeCharacter(x, y, ' ');  // Write a blank space
+void clearCharacter()
+{
+    for (int x = 0; x < 80; x++)
+    {
+        for (int y = 0; y < 60; y++)
+        {
+            writeCharacter(x, y, ' '); // Write a blank space
+        }
     }
-  }
 }
 
-void drawSpring(int chamberX) {
-  // 6 alternating stripes: silver / dark-gray
-  for (int s = 0; s < 6; s++) {
-    short int col = (s % 2 == 0) ? COLOR_SPRING : 0x4208;  // silver / charcoal
-    drawRectangle(chamberX + 2, LOCK_BASE_Y + 2 + (s * 3), CHAMBER_WIDTH - 4, 2,
-                  col);
-  }
+void drawSpring(int chamberX)
+{
+    // 6 alternating stripes: silver / dark-gray
+    for (int s = 0; s < 6; s++)
+    {
+        short int col = (s % 2 == 0) ? COLOR_SPRING : 0x4208; // silver / charcoal
+        drawRectangle(chamberX + 2, LOCK_BASE_Y + 2 + (s * 3), CHAMBER_WIDTH - 4, 2,
+                      col);
+    }
 }
 
 // // Draws the static lock
@@ -38389,426 +38492,492 @@ void drawSpring(int chamberX) {
 //   }
 // }
 
-void drawStaticLock() {
-  int lineThickness = 3;
-  int marginOffset = 3;
-  if (gameDifficulty == DIFF_MEDIUM) {
-    lineThickness = 2;
-    marginOffset = 2;
-  } else if (gameDifficulty == DIFF_HARD) {
-    lineThickness = 1;
-    marginOffset = 1;
-  }
-
-  // Wood-plank background
-  for (int y = 0; y < 240; y++)
-    for (int x = 0; x < 320; x++)
-      plot_pixel(x, y, lock_background[y * 320 + x]);
-
-  // Back plate (top overhang of the lock body)
-  // drawRectangle(LOCK_BASE_X + 20, LOCK_BASE_Y - 20,
-  //               LOCK_WIDTH - 40, 20, COLOR_BRASS);
-
-  // // Main brass lock body
-  // drawRectangle(LOCK_BASE_X, LOCK_BASE_Y, LOCK_WIDTH, LOCK_HEIGHT,
-  // COLOR_BRASS);
-
-  // // Corner rivets on the body
-  // drawRectangle(LOCK_BASE_X + 8,               LOCK_BASE_Y + 8, 4, 4,
-  // COLOR_GOLD); drawRectangle(LOCK_BASE_X + LOCK_WIDTH - 12, LOCK_BASE_Y + 8,
-  // 4, 4, COLOR_GOLD); drawRectangle(LOCK_BASE_X + 8,               LOCK_BASE_Y
-  // + LOCK_HEIGHT - 12, 4, 4, COLOR_GOLD); drawRectangle(LOCK_BASE_X +
-  // LOCK_WIDTH - 12, LOCK_BASE_Y + LOCK_HEIGHT - 12, 4, 4, COLOR_GOLD);
-
-  // // Horizontal pick keyhole track
-  // drawRectangle(20, 130, 280, 24, COLOR_BLACK);
-
-  // 5 pin chambers with springs and per-game shear lines
-  for (int i = 0; i < NUM_PINS; i++) {
-    int cx = LOCK_BASE_X + 25 + (i * 32);
-
-    // Black chamber track
-    drawRectangle(cx, LOCK_BASE_Y, CHAMBER_WIDTH, 90, COLOR_BLACK);
-
-    // Spring coil at top of chamber
-    drawSpring(cx);
-
-    // Red shear (target) line for this pin
-    drawRectangle(cx, pinTargetY[i] - marginOffset, CHAMBER_WIDTH,
-                  lineThickness, COLOR_RED);
-    // Horizontal pick
-    drawRectangle(20, 130, 280, 24, COLOR_BLACK);
-
-    // 5 pin chambers and their springs
-    for (int i = 0; i < NUM_PINS; i++) {
-      // Space them out evenly across the lock base
-      int chamber_x = LOCK_BASE_X + 25 + (i * 32);
-
-      // Draw the empty black chamber track extending upwards
-      drawRectangle(chamber_x, LOCK_BASE_Y, CHAMBER_WIDTH, 90, COLOR_BLACK);
-      drawRectangle(chamber_x, pinTargetY[i] - marginOffset, CHAMBER_WIDTH,
-                    lineThickness, 0xF800);
+void drawStaticLock()
+{
+    int lineThickness = 3;
+    int marginOffset = 3;
+    if (gameDifficulty == DIFF_MEDIUM)
+    {
+        lineThickness = 2;
+        marginOffset = 2;
     }
-  }
+    else if (gameDifficulty == DIFF_HARD)
+    {
+        lineThickness = 1;
+        marginOffset = 1;
+    }
+
+    // Wood-plank background
+    for (int y = 0; y < 240; y++)
+        for (int x = 0; x < 320; x++)
+            plot_pixel(x, y, lock_background[y * 320 + x]);
+
+    // Back plate (top overhang of the lock body)
+    // drawRectangle(LOCK_BASE_X + 20, LOCK_BASE_Y - 20,
+    //               LOCK_WIDTH - 40, 20, COLOR_BRASS);
+
+    // // Main brass lock body
+    // drawRectangle(LOCK_BASE_X, LOCK_BASE_Y, LOCK_WIDTH, LOCK_HEIGHT,
+    // COLOR_BRASS);
+
+    // // Corner rivets on the body
+    // drawRectangle(LOCK_BASE_X + 8,               LOCK_BASE_Y + 8, 4, 4,
+    // COLOR_GOLD); drawRectangle(LOCK_BASE_X + LOCK_WIDTH - 12, LOCK_BASE_Y + 8,
+    // 4, 4, COLOR_GOLD); drawRectangle(LOCK_BASE_X + 8,               LOCK_BASE_Y
+    // + LOCK_HEIGHT - 12, 4, 4, COLOR_GOLD); drawRectangle(LOCK_BASE_X +
+    // LOCK_WIDTH - 12, LOCK_BASE_Y + LOCK_HEIGHT - 12, 4, 4, COLOR_GOLD);
+
+    // // Horizontal pick keyhole track
+    // drawRectangle(20, 130, 280, 24, COLOR_BLACK);
+
+    // 5 pin chambers with springs and per-game shear lines
+    for (int i = 0; i < NUM_PINS; i++)
+    {
+        int cx = LOCK_BASE_X + 25 + (i * 32);
+
+        // Black chamber track
+        drawRectangle(cx, LOCK_BASE_Y, CHAMBER_WIDTH, 90, COLOR_BLACK);
+
+        // Spring coil at top of chamber
+        drawSpring(cx);
+
+        // Red shear (target) line for this pin
+        drawRectangle(cx, pinTargetY[i] - marginOffset, CHAMBER_WIDTH,
+                      lineThickness, COLOR_RED);
+        // Horizontal pick
+        drawRectangle(20, 130, 280, 24, COLOR_BLACK);
+
+        // 5 pin chambers and their springs
+        for (int i = 0; i < NUM_PINS; i++)
+        {
+            // Space them out evenly across the lock base
+            int chamber_x = LOCK_BASE_X + 25 + (i * 32);
+
+            // Draw the empty black chamber track extending upwards
+            drawRectangle(chamber_x, LOCK_BASE_Y, CHAMBER_WIDTH, 90, COLOR_BLACK);
+            drawRectangle(chamber_x, pinTargetY[i] - marginOffset, CHAMBER_WIDTH,
+                          lineThickness, 0xF800);
+        }
+    }
 }
 
 // Assuming these variables are declared globally in the main game loop:
 // int pinYPosition[NUM_PINS]; // Ranging roughly from Y=90 (up) to Y=110
 // (resting down) int pick_x_position;           // Ranging from X=30 to X=200
 
-void drawDynamicElements() {
-  int lineThickness = 3;
-  int marginOffset = 3;
+void drawDynamicElements()
+{
+    int lineThickness = 3;
+    int marginOffset = 3;
 
-  if (gameDifficulty == DIFF_MEDIUM) {
-    lineThickness = 2;
-    marginOffset = 2;
-  } else if (gameDifficulty == DIFF_HARD) {
-    lineThickness = 1;
-    marginOffset = 1;
-  }
-
-  for (int i = 0; i < NUM_PINS; i++) {
-    int pinX = LOCK_BASE_X + 25 + (i * 32);
-    int currentY = pinYPositions[i];
-    int targetY = pinTargetY[i];  // Grab this pin's specific target!
-
-    // 1. Draw the unique red line for this specific chamber
-    drawRectangle(pinX, targetY - marginOffset, CHAMBER_WIDTH, lineThickness,
-                  0xF800);
-    drawSpring(pinX);  // redraw spring every time to cover up any pin overlaps
-
-    // 2. Draw the Pins
-    if (pinSet[i]) {
-      // Shear line turns GREEN to show this pin is picked
-      drawRectangle(pinX, targetY - marginOffset, CHAMBER_WIDTH, lineThickness,
-                    COLOR_GREEN);
-
-      int pinSectionHeight = 20;
-
-      // Driver pin: sits above the green shear line
-      int topPinBottomEdge = targetY - marginOffset;
-      drawRectangle(pinX + 2, topPinBottomEdge - pinSectionHeight,
-                    CHAMBER_WIDTH - 4, pinSectionHeight, COLOR_GOLD);
-
-      // Key pin: sits below the shear line
-      int bottomPinTopEdge = topPinBottomEdge + lineThickness;
-      drawRectangle(pinX + 2, bottomPinTopEdge, CHAMBER_WIDTH - 4,
-                    pinSectionHeight, COLOR_GOLD);
-    } else {
-      // pin is unpicked
-      // Red shear line remains
-      drawRectangle(pinX, targetY - marginOffset, CHAMBER_WIDTH, lineThickness,
-                    COLOR_RED);
-
-      // Driver pin (top half — above keyway gap)
-      drawRectangle(pinX + 2, currentY - 22, CHAMBER_WIDTH - 4, 20, COLOR_GOLD);
-
-      // Key pin (bottom half — below keyway gap)
-      drawRectangle(pinX + 2, currentY, CHAMBER_WIDTH - 4, 20, COLOR_GOLD);
+    if (gameDifficulty == DIFF_MEDIUM)
+    {
+        lineThickness = 2;
+        marginOffset = 2;
     }
-  }
+    else if (gameDifficulty == DIFF_HARD)
+    {
+        lineThickness = 1;
+        marginOffset = 1;
+    }
 
-  // Draw the lockpick coming from the left edge of the screen
-  drawRectangle(0, 142, pickXPosition, 4, COLOR_PICK);
-  drawRectangle(0, 145, pickXPosition, 1, COLOR_PICK_SHADOW);
+    for (int i = 0; i < NUM_PINS; i++)
+    {
+        int pinX = LOCK_BASE_X + 25 + (i * 32);
+        int currentY = pinYPositions[i];
+        int targetY = pinTargetY[i]; // Grab this pin's specific target!
 
-  int tipTopY = 136;
-  if (isHoldingW) {
-    tipTopY = pinYPositions[currentPinIndex] + 20;
-    if (tipTopY > 136) tipTopY = 136;  // dont go below rest
-  }
+        // 1. Draw the unique red line for this specific chamber
+        drawRectangle(pinX, targetY - marginOffset, CHAMBER_WIDTH, lineThickness,
+                      0xF800);
+        drawSpring(pinX); // redraw spring every time to cover up any pin overlaps
 
-  drawRectangle(pickXPosition, tipTopY, 4, 142 - tipTopY, COLOR_PICK);
-  drawRectangle(pickXPosition - 4, tipTopY, 4, 4, COLOR_PICK);
+        // 2. Draw the Pins
+        if (pinSet[i])
+        {
+            // Shear line turns GREEN to show this pin is picked
+            drawRectangle(pinX, targetY - marginOffset, CHAMBER_WIDTH, lineThickness,
+                          COLOR_GREEN);
+
+            int pinSectionHeight = 20;
+
+            // Driver pin: sits above the green shear line
+            int topPinBottomEdge = targetY - marginOffset;
+            drawRectangle(pinX + 2, topPinBottomEdge - pinSectionHeight,
+                          CHAMBER_WIDTH - 4, pinSectionHeight, COLOR_GOLD);
+
+            // Key pin: sits below the shear line
+            int bottomPinTopEdge = topPinBottomEdge + lineThickness;
+            drawRectangle(pinX + 2, bottomPinTopEdge, CHAMBER_WIDTH - 4,
+                          pinSectionHeight, COLOR_GOLD);
+        }
+        else
+        {
+            // pin is unpicked
+            // Red shear line remains
+            drawRectangle(pinX, targetY - marginOffset, CHAMBER_WIDTH, lineThickness,
+                          COLOR_RED);
+
+            // Driver pin (top half — above keyway gap)
+            drawRectangle(pinX + 2, currentY - 22, CHAMBER_WIDTH - 4, 20, COLOR_GOLD);
+
+            // Key pin (bottom half — below keyway gap)
+            drawRectangle(pinX + 2, currentY, CHAMBER_WIDTH - 4, 20, COLOR_GOLD);
+        }
+    }
+
+    // Draw the lockpick coming from the left edge of the screen
+    drawRectangle(0, 142, pickXPosition, 4, COLOR_PICK);
+    drawRectangle(0, 145, pickXPosition, 1, COLOR_PICK_SHADOW);
+
+    int tipTopY = 136;
+    if (isHoldingW)
+    {
+        tipTopY = pinYPositions[currentPinIndex] + 20;
+        if (tipTopY > 136)
+            tipTopY = 136; // dont go below rest
+    }
+
+    drawRectangle(pickXPosition, tipTopY, 4, 142 - tipTopY, COLOR_PICK);
+    drawRectangle(pickXPosition - 4, tipTopY, 4, 4, COLOR_PICK);
 }
 
-int readKeys() {
-  volatile int* keyPtr = (int*)KEY_BASE;
-  return *keyPtr;
+int readKeys()
+{
+    volatile int *keyPtr = (int *)KEY_BASE;
+    return *keyPtr;
 }
 
 // Pauses the game until the user takes their finger off the button
-void waitForRelease() {
-  while (readKeys() != 0) {
-    // Do nothing, just wait
-  }
+void waitForRelease()
+{
+    while (readKeys() != 0)
+    {
+        // Do nothing, just wait
+    }
 }
 
 // Paints over the specific tracks to erase the old pick and springs
 // without having to redraw the heavy wood and brass background.
-void eraseDynamicElements() {
-  // Declare the variables locally inside the function!
-  int lineThickness = 3;
-  int marginOffset = 3;  // <-- Capital 'O'
+void eraseDynamicElements()
+{
+    // Declare the variables locally inside the function!
+    int lineThickness = 3;
+    int marginOffset = 3; // <-- Capital 'O'
 
-  if (gameDifficulty == DIFF_MEDIUM) {
-    lineThickness = 2;
-    marginOffset = 2;
-  } else if (gameDifficulty == DIFF_HARD) {
-    lineThickness = 1;
-    marginOffset = 1;
-  }
+    if (gameDifficulty == DIFF_MEDIUM)
+    {
+        lineThickness = 2;
+        marginOffset = 2;
+    }
+    else if (gameDifficulty == DIFF_HARD)
+    {
+        lineThickness = 1;
+        marginOffset = 1;
+    }
 
-  // 1. Patch the horizontal lockpick keyhole track
-  drawRectangle(LOCK_BASE_X, 130, LOCK_WIDTH, 24, COLOR_BLACK);
+    // 1. Patch the horizontal lockpick keyhole track
+    drawRectangle(LOCK_BASE_X, 130, LOCK_WIDTH, 24, COLOR_BLACK);
 
-  // 2. Patch the vertical pin chambers
-  for (int i = 0; i < NUM_PINS; i++) {
-    int chamber_x = LOCK_BASE_X + 25 + (i * 32);
-    drawRectangle(chamber_x, LOCK_BASE_Y, CHAMBER_WIDTH, 90, COLOR_BLACK);
-    drawRectangle(chamber_x, pinTargetY[i] - marginOffset, CHAMBER_WIDTH,
-                  lineThickness, 0xF800);
-  }
+    // 2. Patch the vertical pin chambers
+    for (int i = 0; i < NUM_PINS; i++)
+    {
+        int chamber_x = LOCK_BASE_X + 25 + (i * 32);
+        drawRectangle(chamber_x, LOCK_BASE_Y, CHAMBER_WIDTH, 90, COLOR_BLACK);
+        drawRectangle(chamber_x, pinTargetY[i] - marginOffset, CHAMBER_WIDTH,
+                      lineThickness, 0xF800);
+    }
 }
 
 void drawPadlockIcon(int x, int y, short int bodyColor,
-                     short int shackleColor) {
-  // Shackle arch (inverted U)
-  drawRectangle(x + 2, y, 2, 6, shackleColor);  // left leg
-  drawRectangle(x + 6, y, 2, 6, shackleColor);  // right leg
-  drawRectangle(x + 2, y, 6, 2, shackleColor);  // top bar
+                     short int shackleColor)
+{
+    // Shackle arch (inverted U)
+    drawRectangle(x + 2, y, 2, 6, shackleColor); // left leg
+    drawRectangle(x + 6, y, 2, 6, shackleColor); // right leg
+    drawRectangle(x + 2, y, 6, 2, shackleColor); // top bar
 
-  // Body
-  drawRectangle(x, y + 5, 10, 7, bodyColor);
+    // Body
+    drawRectangle(x, y + 5, 10, 7, bodyColor);
 
-  // Keyhole dot
-  drawRectangle(x + 4, y + 7, 2, 3, COLOR_BLACK);
+    // Keyhole dot
+    drawRectangle(x + 4, y + 7, 2, 3, COLOR_BLACK);
 }
 
-void drawRotaryBar() {
-  // tension label
-  writeString(2, 52, "TENSION");
+void drawRotaryBar()
+{
+    // tension label
+    writeString(2, 52, "TENSION");
 
-  // padlock
-  // Spacing: 5 icons across, starting at x=90, y=200
-  int iconStartX = 90;
-  int iconY = 203;
-  int iconSpacing = 30;
+    // padlock
+    // Spacing: 5 icons across, starting at x=90, y=200
+    int iconStartX = 90;
+    int iconY = 203;
+    int iconSpacing = 30;
 
-  for (int i = 0; i < NUM_PINS; i++) {
-    int ix = iconStartX + (i * iconSpacing);
+    for (int i = 0; i < NUM_PINS; i++)
+    {
+        int ix = iconStartX + (i * iconSpacing);
 
-    if (pinSet[i]) {
-      // Green padlock = this pin is locked in
-      drawPadlockIcon(ix, iconY, COLOR_GREEN, COLOR_GREEN);
-    } else if (i == currentPinIndex) {
-      // Gold/yellow = currently selected pin
-      drawPadlockIcon(ix, iconY, COLOR_GOLD, COLOR_SPRING);
-    } else {
-      // Dark gray = not yet picked
-      drawPadlockIcon(ix, iconY, 0x4208, 0x4208);
+        if (pinSet[i])
+        {
+            // Green padlock = this pin is locked in
+            drawPadlockIcon(ix, iconY, COLOR_GREEN, COLOR_GREEN);
+        }
+        else if (i == currentPinIndex)
+        {
+            // Gold/yellow = currently selected pin
+            drawPadlockIcon(ix, iconY, COLOR_GOLD, COLOR_SPRING);
+        }
+        else
+        {
+            // Dark gray = not yet picked
+            drawPadlockIcon(ix, iconY, 0x4208, 0x4208);
+        }
     }
-  }
 
-  // tension bar
-  int barX = 20;
-  int barY = 218;
-  int barW = 280;
-  int barH = 5;
+    // tension bar
+    int barX = 20;
+    int barY = 218;
+    int barW = 280;
+    int barH = 5;
 
-  // Gray background track
-  drawRectangle(barX, barY, barW, barH, 0xAD55);
+    // Gray background track
+    drawRectangle(barX, barY, barW, barH, 0xAD55);
 
-  int rotary_difference;
-  if (rotary_counter > target_rotary_end) {
-    rotary_difference = rotary_counter - target_rotary_end;
-    rotary_in_range = false;
-  } else if (rotary_counter < target_rotary_start) {
-    rotary_difference = target_rotary_start - rotary_counter;
-    rotary_in_range = false;
-  } else {
-    rotary_difference = 0;
-    rotary_in_range = true;
-  }
+    int rotary_difference;
+    if (rotary_counter > target_rotary_end)
+    {
+        rotary_difference = rotary_counter - target_rotary_end;
+        rotary_in_range = false;
+    }
+    else if (rotary_counter < target_rotary_start)
+    {
+        rotary_difference = target_rotary_start - rotary_counter;
+        rotary_in_range = false;
+    }
+    else
+    {
+        rotary_difference = 0;
+        rotary_in_range = true;
+    }
 
-  int drawnBarWidth = barW - (rotary_difference * barW) / 255;
-  short int bar_color = rotary_in_range ? COLOR_GREEN : COLOR_RED;
+    int drawnBarWidth = barW - (rotary_difference * barW) / 255;
+    short int bar_color = rotary_in_range ? COLOR_GREEN : COLOR_RED;
 
-  if (drawnBarWidth > 0)
-    drawRectangle(barX, barY, drawnBarWidth, barH, bar_color);
+    if (drawnBarWidth > 0)
+        drawRectangle(barX, barY, drawnBarWidth, barH, bar_color);
 
-  // White indicator dot at the right edge of the drawn bar
-  if (drawnBarWidth > 2)
-    drawRectangle(barX + drawnBarWidth - 2, barY, 3, barH, 0xFFFF);
+    // White indicator dot at the right edge of the drawn bar
+    if (drawnBarWidth > 2)
+        drawRectangle(barX + drawnBarWidth - 2, barY, 3, barH, 0xFFFF);
 
-  // control instructions
-  writeString(2, 58, "W:LIFT  A D:MOVE  C X:TURN");
+    // control instructions
+    writeString(2, 58, "W:LIFT  A D:MOVE  C X:TURN");
 }
 
 // Reads a single byte from the PS/2 keyboard buffer
 // Returns 1 if a key was pressed, 0 if the buffer is empty
-int readPS2(char* byte) {
-  volatile int* ps2Ptr = (int*)PS2_BASE;
-  int ps2Data = *ps2Ptr;  // Gets the input from the keyboard
+int readPS2(char *byte)
+{
+    volatile int *ps2Ptr = (int *)PS2_BASE;
+    int ps2Data = *ps2Ptr; // Gets the input from the keyboard
 
-  // Bit 15 is the RVALID (Read Valid) flag.
-  // If it is 1, there is valid keyboard data in the lowest 8 bits.
-  if (ps2Data & 0x8000) {
-    *byte = ps2Data & 0xFF;  // Extract the hex Make Code
-    return 1;
-  }
-  return 0;
+    // Bit 15 is the RVALID (Read Valid) flag.
+    // If it is 1, there is valid keyboard data in the lowest 8 bits.
+    if (ps2Data & 0x8000)
+    {
+        *byte = ps2Data & 0xFF; // Extract the hex Make Code
+        return 1;
+    }
+    return 0;
 }
 
-void wait_for_vsync() {
-  volatile int* pixel_ctrl_ptr = (int*)0xFF203020;
-  register int status;
+void wait_for_vsync()
+{
+    volatile int *pixel_ctrl_ptr = (int *)0xFF203020;
+    register int status;
 
-  *pixel_ctrl_ptr = 1;  // Store a 1 into the Buffer to request the swap
+    *pixel_ctrl_ptr = 1; // Store a 1 into the Buffer to request the swap
 
-  // wait for status = 0
-  status = *(pixel_ctrl_ptr + 3);
-  while ((status & 0x01) != 0) {
-    // --- THE MAGIC FIX ---
-    // While the CPU is trapped here waiting for the monitor to refresh,
-    // force it to continuously feed the audio hardware!
-    updateAudio();
-
+    // wait for status = 0
     status = *(pixel_ctrl_ptr + 3);
-  }
+    while ((status & 0x01) != 0)
+    {
+        // --- THE MAGIC FIX ---
+        // While the CPU is trapped here waiting for the monitor to refresh,
+        // force it to continuously feed the audio hardware!
+        updateAudio();
+
+        status = *(pixel_ctrl_ptr + 3);
+    }
 }
 
 // Read the switches 0-3
-int readSwitches() {
-  volatile int* sw = (int*)SWITCH_BASE;
-  return (*sw) & 0x1F;
+int readSwitches()
+{
+    volatile int *sw = (int *)SWITCH_BASE;
+    return (*sw) & 0x1F;
 }
 
 // Show LEDs
 
-void updateLEDs(int ledToLight) {
-  volatile int* led = (int*)LED_BASE;
-  *led = ledToLight;
+void updateLEDs(int ledToLight)
+{
+    volatile int *led = (int *)LED_BASE;
+    *led = ledToLight;
 }
 
 // Match the pins and display on led
 
-void matchPins() {
-  int currentSwitches = readSwitches();
-  matchedPins = 0;
-  for (int pin = 0; pin < NUM_PINS; pin++) {
-    int switchToggled = (currentSwitches >> pin) & 1;
-    int patternBit = (targetPattern >> pin) & 1;
-    if (switchToggled == patternBit) {
-      matchedPins |= (1 << pin);
+void matchPins()
+{
+    int currentSwitches = readSwitches();
+    matchedPins = 0;
+    for (int pin = 0; pin < NUM_PINS; pin++)
+    {
+        int switchToggled = (currentSwitches >> pin) & 1;
+        int patternBit = (targetPattern >> pin) & 1;
+        if (switchToggled == patternBit)
+        {
+            matchedPins |= (1 << pin);
+        }
     }
-  }
 
-  //    updateLEDs(matchedPins);
+    //    updateLEDs(matchedPins);
 }
 
-void playFailSound() {
-  volatile int* audioPtr = (int*)AUDIO_BASE;
-  int sampleRate = 8000;
-  int volume = 0x00FFFFFF;
+void playFailSound()
+{
+    volatile int *audioPtr = (int *)AUDIO_BASE;
+    int sampleRate = 8000;
+    int volume = 0x00FFFFFF;
 
-  int freq = 150;  // Low, harsh buzz
-  int halfPeriod = sampleRate / freq / 2;
-  int duration = sampleRate / 3;  // Play for 0.33 seconds
-  int currentSample = 0;
-  int waveCounter = 0;
-  int currentAmplitude = volume;
+    int freq = 150; // Low, harsh buzz
+    int halfPeriod = sampleRate / freq / 2;
+    int duration = sampleRate / 3; // Play for 0.33 seconds
+    int currentSample = 0;
+    int waveCounter = 0;
+    int currentAmplitude = volume;
 
-  while (currentSample < duration) {
-    int fifoSpace = *(audioPtr + 1);
-    int leftSpace = (fifoSpace >> 24) & 0xFF;
-    int rightSpace = (fifoSpace >> 16) & 0xFF;
+    while (currentSample < duration)
+    {
+        int fifoSpace = *(audioPtr + 1);
+        int leftSpace = (fifoSpace >> 24) & 0xFF;
+        int rightSpace = (fifoSpace >> 16) & 0xFF;
 
-    if (leftSpace > 0 && rightSpace > 0) {
-      *(audioPtr + 2) = currentAmplitude;
-      *(audioPtr + 3) = currentAmplitude;
-      currentSample++;
-      waveCounter++;
+        if (leftSpace > 0 && rightSpace > 0)
+        {
+            *(audioPtr + 2) = currentAmplitude;
+            *(audioPtr + 3) = currentAmplitude;
+            currentSample++;
+            waveCounter++;
 
-      if (waveCounter >= halfPeriod) {
-        currentAmplitude = -currentAmplitude;
-        waveCounter = 0;
-      }
+            if (waveCounter >= halfPeriod)
+            {
+                currentAmplitude = -currentAmplitude;
+                waveCounter = 0;
+            }
+        }
     }
-  }
 }
 
 // Timer functions
-void set_itimer(void) {
-  volatile int* timer_ptr = (int*)TIMER_BASE;
+void set_itimer(void)
+{
+    volatile int *timer_ptr = (int *)TIMER_BASE;
 
-  int counterValue = 100000000;  // 1 second at 100 MHz
+    int counterValue = 100000000; // 1 second at 100 MHz
 
-  // Clear any previous interrupt first
-  *timer_ptr = 0;
+    // Clear any previous interrupt first
+    *timer_ptr = 0;
 
-  *(timer_ptr + 0x2) = counterValue & 0xFFFF;          // low 16 bits
-  *(timer_ptr + 0x3) = (counterValue >> 16) & 0xFFFF;  // high 16 bits
+    *(timer_ptr + 0x2) = counterValue & 0xFFFF;         // low 16 bits
+    *(timer_ptr + 0x3) = (counterValue >> 16) & 0xFFFF; // high 16 bits
 
-  *(timer_ptr + 1) = 0x7;  // start timer and enable START + CONT + ITO
+    *(timer_ptr + 1) = 0x7; // start timer and enable START + CONT + ITO
 }
 
-void enable_interrupts(void) {
-  JP1_DIR = 0x00000000;   // all pins input
-  JP1_EDGE = 0xFFFFFFFF;  // clear stale edge capture
-  JP1_IE = 0x00000001;    // interrupt on D0 only
+void enable_interrupts(void)
+{
+    JP1_DIR = 0x00000000;  // all pins input
+    JP1_EDGE = 0xFFFFFFFF; // clear stale edge capture
+    JP1_IE = 0x00000001;   // interrupt on D0 only
 
-  int mstatus_value, mtvec_value, mie_value;
-  mstatus_value = 0b1000;  // interrupt bit mask
+    int mstatus_value, mtvec_value, mie_value;
+    mstatus_value = 0b1000; // interrupt bit mask
 
-  // Disable interrupts
-  __asm__ volatile("csrc mstatus, %0" ::"r"(mstatus_value));
-  mtvec_value = (int)&handler;
-  __asm__ volatile("csrw mtvec, %0" ::"r"(mtvec_value));
+    // Disable interrupts
+    __asm__ volatile("csrc mstatus, %0" ::"r"(mstatus_value));
+    mtvec_value = (int)&handler;
+    __asm__ volatile("csrw mtvec, %0" ::"r"(mtvec_value));
 
-  // Disable all interrupts that are currently enabled
-  __asm__ volatile("csrr %0, mie" : "=r"(mie_value));
-  __asm__ volatile("csrc mie, %0" ::"r"(mie_value));
-  mie_value = (1 << 27) | (1 << 16);  // Timer bit 16 and Rotary bit 27
+    // Disable all interrupts that are currently enabled
+    __asm__ volatile("csrr %0, mie" : "=r"(mie_value));
+    __asm__ volatile("csrc mie, %0" ::"r"(mie_value));
+    mie_value = (1 << 27) | (1 << 16); // Timer bit 16 and Rotary bit 27
 
-  // Set interrupts enables
-  __asm__ volatile("csrs mie, %0" ::"r"(mie_value));
+    // Set interrupts enables
+    __asm__ volatile("csrs mie, %0" ::"r"(mie_value));
 
-  // Enable Nois V interrupts
-  __asm__ volatile("csrs mstatus, %0" ::"r"(mstatus_value));
+    // Enable Nois V interrupts
+    __asm__ volatile("csrs mstatus, %0" ::"r"(mstatus_value));
 }
 
-void handler(void) {
-  int mcause_value;
-  __asm__ volatile("csrr %0, mcause" : "=r"(mcause_value));
+void handler(void)
+{
+    int mcause_value;
+    __asm__ volatile("csrr %0, mcause" : "=r"(mcause_value));
 
-  if (mcause_value == 0x80000010) {  // interval timer interrupt
-    itimer_ISR();
-  } else if (mcause_value == JP1_MCAUSE) {  // rotary interrupt
-    rotary_ISR();
-  }
-}
-
-void itimer_ISR(void) {
-  volatile int* timer_ptr = (int*)TIMER_BASE;
-
-  // Clear timer interrupt
-  *timer_ptr = 0;
-
-  // Only count time during game state
-  if (state == GAME_STATE && timerStarted == 1) {
-    elapsedTime++;
-
-    if (rotary_in_range) {
-      rotary_counter--;
-      if (rotary_counter < 0) rotary_counter = 255;
+    if (mcause_value == 0x80000010)
+    { // interval timer interrupt
+        itimer_ISR();
     }
-  }
+    else if (mcause_value == JP1_MCAUSE)
+    { // rotary interrupt
+        rotary_ISR();
+    }
 }
 
-void rotary_ISR(void) {
-  unsigned int pins = JP1_DATA;
-  unsigned int B = (pins >> 1) & 1;  // just get d1
+void itimer_ISR(void)
+{
+    volatile int *timer_ptr = (int *)TIMER_BASE;
 
-  if (B == 1) {  // clockwise
-    rotary_counter++;
-    if (rotary_counter > 255) rotary_counter = 0;
-  } else {
-    rotary_counter--;
-    if (rotary_counter < 0) rotary_counter = 255;
-  }
+    // Clear timer interrupt
+    *timer_ptr = 0;
 
-  *LEDR_ptr = rotary_counter;
-  JP1_EDGE = 0xFFFFFFFF;  // clear edge capture
+    // Only count time during game state
+    if (state == GAME_STATE && timerStarted == 1)
+    {
+        elapsedTime++;
+
+        if (rotary_in_range)
+        {
+            rotary_counter--;
+            if (rotary_counter < 0)
+                rotary_counter = 255;
+        }
+    }
+}
+
+void rotary_ISR(void)
+{
+    unsigned int pins = JP1_DATA;
+    unsigned int B = (pins >> 1) & 1; // just get d1
+
+    if (B == 1)
+    { // clockwise
+        rotary_counter++;
+        if (rotary_counter > 255)
+            rotary_counter = 0;
+    }
+    else
+    {
+        rotary_counter--;
+        if (rotary_counter < 0)
+            rotary_counter = 255;
+    }
+
+    *LEDR_ptr = rotary_counter;
+    JP1_EDGE = 0xFFFFFFFF; // clear edge capture
 }
