@@ -37746,6 +37746,13 @@ void enable_interrupts(void); // enable interrupts
 void itimer_ISR(void);
 void drawTimer();
 
+// Pause/ for testing
+bool isPaused = false;
+int pauseSelection = 0; // 0 Resume, 1 Restart
+bool resumedFromPause = false; // Flag to indicate if we're resuming from pause
+void drawPauseMenu();
+int totalPinsUp = 0;
+
 // Delete: #define SHEAR_LINE_Y 75
 int pinTargetY[NUM_PINS]; // Stores the unique red line height for each pin
 #define PIN_REST_Y 110
@@ -38042,8 +38049,8 @@ int main(void)
                     ignoreNext = false;
                     extendedKey = false;
 
-                    // Key released is W or up arrow
-                    if (keyByte == (char)0x1D || keyByte == (char)0x75)
+                    // Key released is W or up arrow and game not paused
+                    if (!isPaused && (keyByte == (char)0x1D || keyByte == (char)0x75))
                     {
                         isHoldingW = false;
                         // Was W release it while the gap was on the line?
@@ -38086,6 +38093,75 @@ int main(void)
                 else
                 {
                     // Key pressed
+                    if (keyByte == (char)0x76)
+                    { // ESC = pause
+                        if (isPaused)
+                        {
+                            isPaused = false;
+                            pauseSelection = 0;
+                            clearCharacter();
+                            resumedFromPause = true;
+                        }
+                        else
+                        {
+                            isPaused = true;
+                            pauseSelection = 0;
+                        }
+                        extendedKey = false; // reset after use
+                        continue;
+                    }
+
+                    // Pause menu selection
+                    if (isPaused)
+                    {
+                        bool isUp = (!extendedKey && keyByte == (char)0x1D) ||
+                                    (extendedKey && keyByte == (char)0x75);
+                        bool isDown = (!extendedKey && keyByte == (char)0x1B) ||
+                                      (extendedKey && keyByte == (char)0x72);
+
+                        if (isUp && pauseSelection > 0)
+                            pauseSelection--;
+                        if (isDown && pauseSelection < 1)
+                            pauseSelection++;
+
+                        if (keyByte == (char)0x5A) /* Enter */
+                        {
+                            if (pauseSelection == 0)
+                            {
+                                /* RESUME */
+                                isPaused = false;
+                                pauseSelection = 0;
+                                clearCharacter();
+                                resumedFromPause = true;
+                            }
+                            else
+                            {
+                                /* RETURN TO HOME */
+                                isPaused = false;
+                                pauseSelection = 0;
+                                isHoldingW = false;
+                                timerStarted = 0;
+                                clearCharacter();
+                                state = MENU_STATE;
+                            }
+                        }
+
+                        extendedKey = false;
+                        continue;
+                    }
+
+                    // For testing
+                    if (keyByte == (char)0x45) // 0 -> instant fail
+                    {
+                        elapsedTime = 1000; // Set to a high number to trigger game over on next check
+                    }
+
+                    if (keyByte == (char)0x16) // 1 -> instant win
+                    {
+                        for (int i = 0; i < NUM_PINS; i++)
+                            pinSet[i] = true;
+                        currentSequenceIndex = NUM_PINS;
+                    }
 
                     // Key pressed
                     bool isLeft = (!extendedKey && keyByte == (char)0x1C) ||  // A
@@ -38130,6 +38206,24 @@ int main(void)
                         *LEDR_ptr = rotary_counter;
                     }
                 }
+            }
+
+            if (isPaused)
+            {
+                drawPauseMenu();
+                updateAudio();
+                wait_for_vsync();
+                pixel_buffer_start = *(pixel_ctrl_ptr + 1);
+                continue;
+            }
+
+            if (resumedFromPause)
+            {
+                pixel_buffer_start = (int)&buffer1;
+                drawStaticLock();
+                pixel_buffer_start = (int)&buffer2;
+                drawStaticLock();
+                resumedFromPause = false;
             }
 
             // Game physics
@@ -38184,7 +38278,9 @@ int main(void)
                     setTotal++;
             }
 
-            if (setTotal == NUM_PINS)
+            totalPinsUp = setTotal;
+
+            if (totalPinsUp == NUM_PINS)
             {
                 triggerVictorySound();
                 timerStarted = 0;
@@ -38278,10 +38374,10 @@ void drawMenu()
     short int hardFill = (menuSelection == DIFF_HARD) ? COLOR_SELECTED_RED_FILL : COLOR_DARK_RED_FILL;
 
     drawRectangle(boxX, yEasy, boxW, boxH, easyFill);
-    drawRectangle(boxX, yEasy, boxW, bdr, COLOR_GREEN_BORDER);       
-    drawRectangle(boxX, yEasy + boxH - bdr, boxW, bdr, COLOR_GREEN_BORDER); 
-    drawRectangle(boxX, yEasy, bdr, boxH, COLOR_GREEN_BORDER);       
-    drawRectangle(boxX + boxW - bdr, yEasy, bdr, boxH, COLOR_GREEN_BORDER); 
+    drawRectangle(boxX, yEasy, boxW, bdr, COLOR_GREEN_BORDER);
+    drawRectangle(boxX, yEasy + boxH - bdr, boxW, bdr, COLOR_GREEN_BORDER);
+    drawRectangle(boxX, yEasy, bdr, boxH, COLOR_GREEN_BORDER);
+    drawRectangle(boxX + boxW - bdr, yEasy, bdr, boxH, COLOR_GREEN_BORDER);
     writeString(57, 17, "EASY");
 
     drawRectangle(boxX, yMed, boxW, boxH, medFill);
@@ -38947,7 +39043,7 @@ void itimer_ISR(void)
     *timer_ptr = 0;
 
     // Only count time during game state
-    if (state == GAME_STATE && timerStarted == 1)
+    if (state == GAME_STATE && timerStarted == 1 && !isPaused)
     {
         elapsedTime++;
 
@@ -38980,4 +39076,43 @@ void rotary_ISR(void)
 
     *LEDR_ptr = rotary_counter;
     JP1_EDGE = 0xFFFFFFFF; // clear edge capture
+}
+
+void drawPauseMenu()
+{
+    int boxX = 80, boxY = 80;
+    int boxW = 160, boxH = 80;
+    int bdr = 3;
+    int barX = boxX + 8;  
+    int barW = boxW - 16;  
+
+    drawRectangle(boxX, boxY, boxW, boxH, COLOR_BOX_BLUE); 
+    drawRectangle(boxX, boxY, boxW, bdr, COLOR_BORDER_GOLD);
+    drawRectangle(boxX, boxY + boxH - bdr, boxW, bdr, COLOR_BORDER_GOLD);
+    drawRectangle(boxX, boxY, bdr, boxH, COLOR_BORDER_GOLD);
+    drawRectangle(boxX + boxW - bdr, boxY, bdr, boxH, COLOR_BORDER_GOLD);
+
+    writeString(37, 22, "PAUSED");
+
+    // Resume
+    if (pauseSelection == 0)
+    {
+        drawRectangle(barX, 103, barW, 13, COLOR_DARK_GREEN_FILL); /* highlight */
+        writeString(37, 27, "RESUME");
+    }
+    else
+    {
+        writeString(37, 27, "RESUME");
+    }
+
+    // Return to home
+    if (pauseSelection == 1)
+    {
+        drawRectangle(barX, 123, barW, 13, COLOR_DARK_GREEN_FILL); /* highlight */
+        writeString(33, 32, "RETURN TO HOME");
+    }
+    else
+    {
+        writeString(33, 32, "RETURN TO HOME");
+    }
 }
