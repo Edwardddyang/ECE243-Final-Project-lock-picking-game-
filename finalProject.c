@@ -37727,6 +37727,7 @@ void drawPadlockIcon(int x, int y, short int bodyColor,
 // State changing
 int readKeys();
 void waitForRelease();
+void resetGameUIState();
 
 // Audio
 void playStartSound();
@@ -38136,16 +38137,9 @@ int main(void)
                             else
                             {
                                 /* RETURN TO HOME */
-                                isPaused = false;
-                                pauseSelection = 0;
-                                isHoldingW = false;
-                                timerStarted = 0;
-                                clearCharacter();
-                                pixel_buffer_start = (int)&buffer1;
-                                clearScreen();
-                                pixel_buffer_start = (int)&buffer2;
-                                clearScreen();
+                                resetGameUIState();
                                 state = MENU_STATE;
+                                break;
                             }
                         }
 
@@ -38210,6 +38204,11 @@ int main(void)
                         *LEDR_ptr = rotary_counter;
                     }
                 }
+            }
+
+            if (state != GAME_STATE)
+            {
+                continue;
             }
 
             if (isPaused)
@@ -38345,12 +38344,8 @@ int main(void)
                 else if (keyByte == 0x5A)
                 {
                     /* Enter — back to menu */
-    clearCharacter();
-    pixel_buffer_start = (int)&buffer1;
-    clearScreen();
-    pixel_buffer_start = (int)&buffer2;
-    clearScreen();
-    state = MENU_STATE;
+                    resetGameUIState();
+                    state = MENU_STATE;
                 }
             }
         }
@@ -39136,4 +39131,28 @@ void drawPauseMenu()
     {
         writeString(33, 32, "RETURN TO HOME");
     }
+}
+
+void resetGameUIState()
+{
+    // Clear gameplay-only UI / state before going back to menu
+    isHoldingW = false;
+    moveLeft = false;
+    moveRight = false;
+    rotary_in_range = false;
+    timerStarted = 0;
+    elapsedTime = 0;
+    isPaused = false;
+    pauseSelection = 0;
+    resumedFromPause = false;
+
+    totalPinsUp = 0;
+    currentPinIndex = 0;
+    pickXPosition = 50;
+
+    extendedKey = false;
+    ignoreNext = false;
+
+    updateLEDs(0);    // clear LEDs
+    clearCharacter(); // clear TIME / TENSION / controls text
 }
