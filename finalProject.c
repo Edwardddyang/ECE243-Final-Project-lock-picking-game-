@@ -38372,7 +38372,7 @@ void drawMenu()
         for (int x = 0; x < 320; x++)
             plot_pixel(x, y, main_menu_bg[y * 320 + x]);
 
-    writeString(20, 3, "WELCOME TO LOCK PICK");
+    writeString(30, 2, "WELCOME TO LOCK PICK");
 
     int boxX = 168;
     int boxW = 146;
