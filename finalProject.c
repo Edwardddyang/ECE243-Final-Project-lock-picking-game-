@@ -38207,9 +38207,10 @@ int main(void)
             }
 
             if (state != GAME_STATE)
-            {
-                continue;
-            }
+{
+    continue;
+}
+
 
             if (isPaused)
             {
