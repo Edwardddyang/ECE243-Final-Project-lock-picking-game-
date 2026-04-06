@@ -38246,6 +38246,12 @@ int main(void) {
     updateAudio();
     *(pixel_ctrl_ptr + 1) = pixel_buffer_start;
     wait_for_vsync();
+
+    if (pixel_buffer_start == (int)&buffer1) {
+      pixel_buffer_start = (int)&buffer2;
+    } else {
+      pixel_buffer_start = (int)&buffer1;
+    }
   }
 }
 
