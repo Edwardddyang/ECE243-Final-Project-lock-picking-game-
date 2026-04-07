@@ -37727,6 +37727,7 @@ void drawPadlockIcon(int x, int y, short int bodyColor,
 // State changing
 int readKeys();
 void waitForRelease();
+void resetGameUIState();
 
 // Audio
 void playStartSound();
@@ -38075,12 +38076,9 @@ int main(void) {
                 resumedFromPause = true;
               } else {
                 /* RETURN TO HOME */
-                isPaused = false;
-                pauseSelection = 0;
-                isHoldingW = false;
-                timerStarted = 0;
-                clearCharacter();
+                resetGameUIState();
                 state = MENU_STATE;
+                break;
               }
             }
 
@@ -38130,6 +38128,10 @@ int main(void) {
             *LEDR_ptr = rotary_counter;
           }
         }
+      }
+
+      if (state != GAME_STATE) {
+        continue;
       }
 
       if (isPaused) {
@@ -38237,7 +38239,7 @@ int main(void) {
           ignoreNext = false;
         } else if (keyByte == 0x5A) {
           /* Enter — back to menu */
-          clearCharacter();
+          resetGameUIState();
           state = MENU_STATE;
         }
       }
@@ -38259,7 +38261,7 @@ void drawMenu() {
   for (int y = 0; y < 240; y++)
     for (int x = 0; x < 320; x++) plot_pixel(x, y, main_menu_bg[y * 320 + x]);
 
-  writeString(20, 3, "WELCOME TO LOCK PICK");
+  writeString(30, 2, "WELCOME TO LOCK PICK");
 
   int boxX = 168;
   int boxW = 146;
@@ -38296,7 +38298,7 @@ void drawMenu() {
   drawRectangle(boxX, yHard + boxH - bdr, boxW, bdr, COLOR_RED_BORDER);
   drawRectangle(boxX, yHard, bdr, boxH, COLOR_RED_BORDER);
   drawRectangle(boxX + boxW - bdr, yHard, bdr, boxH, COLOR_RED_BORDER);
-  writeString(57, 42, "HARD");
+  writeString(, 42, "RUTHLESS");
 
   int arrowX = boxX - 13;
   int arrowY;
@@ -38925,4 +38927,27 @@ void drawPauseMenu() {
   } else {
     writeString(33, 32, "RETURN TO HOME");
   }
+}
+
+void resetGameUIState() {
+  // Clear gameplay-only UI / state before going back to menu
+  isHoldingW = false;
+  moveLeft = false;
+  moveRight = false;
+  rotary_in_range = false;
+  timerStarted = 0;
+  elapsedTime = 0;
+  isPaused = false;
+  pauseSelection = 0;
+  resumedFromPause = false;
+
+  totalPinsUp = 0;
+  currentPinIndex = 0;
+  pickXPosition = 50;
+
+  extendedKey = false;
+  ignoreNext = false;
+
+  updateLEDs(0);     // clear LEDs
+  clearCharacter();  // clear TIME / TENSION / controls text
 }
