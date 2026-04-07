@@ -11,8 +11,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/*START OF BACKGROUND*/
-// Static lock background 320x240 RGB565 — no vignette, pixel art
+/* IMAGES AND AUDIOS */
+
+// Static lock background
 const unsigned short lock_background[76800] = {
     0x0861, 0x0861, 0x0861, 0x0861, 0x0861, 0x0861, 0x0861, 0x0861, 0x0861,
     0x0861, 0x0861, 0x0861, 0x0861, 0x0861, 0x0861, 0x0861, 0x0861, 0x0861,
@@ -8549,7 +8550,7 @@ const unsigned short lock_background[76800] = {
     0x3921, 0x3921, 0x3921, 0x3921, 0x3921, 0x3921, 0x3921, 0x3921, 0x3921,
     0x3921, 0x3921, 0x3921};
 
-// array size is 153600
+// End menu background
 const unsigned short brick_bg[] = {
     0xd502, 0xd502, 0xd502, 0xd502, 0xd502, 0xd502, 0xd502, 0xd502, 0xd502,
     0xd502, 0xd502, 0xd502, 0xd502, 0xd502, 0xd502, 0xd502, 0xd502, 0xd502,
@@ -17086,7 +17087,7 @@ const unsigned short brick_bg[] = {
     0x0022, 0x0022, 0x0022, 0x0022, 0x0022, 0x0022, 0x0022, 0x0022, 0x0022,
     0x0022, 0x0022, 0x0022};
 
-// array size is 153600
+// main menu background
 const unsigned short main_menu_bg[] = {
     0xd502, 0xd502, 0xd502, 0xd502, 0xd502, 0xd502, 0xd502, 0xd502, 0xd502,
     0xd502, 0xd502, 0xd502, 0xd502, 0xd502, 0xd502, 0xd502, 0xd502, 0xd502,
@@ -37606,10 +37607,11 @@ const unsigned char gameFail[] = {
     0x6F, 0x66, 0x74, 0x77, 0x61, 0x72, 0x65, 0x00, 0x4C, 0x61, 0x76, 0x66,
     0x36, 0x30, 0x2E, 0x31, 0x36, 0x2E, 0x31, 0x30, 0x30, 0x00};
 
+/* DEFINES */
+
 // Memory mapped addresses
-#define CHAR_BUFFER_BASE \
-    0x09000000 // Character buffer, acts as an overlay on top of the pixel
-               // buffer, 80col x 60row grid of character cells
+#define CHAR_BUFFER_BASE 0x09000000 // Character buffer, acts as an overlay on top of the pixel
+                                    // buffer, 80col x 60row grid of character cells
 #define KEY_BASE 0xFF200050
 #define PS2_BASE 0xFF200100
 #define AUDIO_BASE 0xFF203040
@@ -37617,46 +37619,30 @@ const unsigned char gameFail[] = {
 #define LED_BASE 0xFF200000
 #define TIMER_BASE 0xFF202000
 
-volatile int pixel_buffer_start; // global variable
-short int buffer1[240][512];
-short int buffer2[240][512];
-
-// ROTARY
+// Rotary base and interrupt cause for rotary
 #define ROTARY_BASE 0xFF200060
-#define JP1_MCAUSE 0x8000001B // Machine External Interrupt (for rotary)
+#define JP1_MCAUSE 0x8000001B
 
-#define LEDR_ptr ((volatile int *)LED_BASE)
-#define rotary_ptr ((volatile int *)ROTARY_BASE)
+// Game states
+#define MENU_STATE 0
+#define GAME_STATE 1
+#define END_STATE 2
 
-#define JP1_DATA (*(rotary_ptr))
-#define JP1_DIR (*(rotary_ptr + 1))
-#define JP1_IE (*(rotary_ptr + 2))
-#define JP1_EDGE (*(rotary_ptr + 3))
+// Difficulties
+#define DIFF_EASY 0
+#define DIFF_MEDIUM 1
+#define DIFF_HARD 2
 
-volatile int rotary_counter = 0;
-
-void rotary_ISR(void);
-
-// ROTARY FOR GAME PLAY
-int target_rotary_start = 30;
-int target_rotary_end = 40;
-bool rotary_in_range = false;
-
-// DEFINES/VARIABLES FOR DRAWING
+// For drawing the lock and calculating pin positions
 #define LOCK_BASE_X 60
 #define LOCK_BASE_Y 40
 #define LOCK_WIDTH 200
 #define LOCK_HEIGHT 160
 #define CHAMBER_WIDTH 16
 #define NUM_PINS 5
-int pinYPositions[NUM_PINS];
-int pickXPosition = 50;  // Starting X position of the lockpick
-bool ignoreNext = false; // A flag to catch the 0xF0 key-release byte
-bool moveLeft = false;
-bool moveRight = false;
+#define PIN_REST_Y 110
 
-#define COLOR_WOOD 0x3186        // Dark brown
-#define COLOR_BRASS 0xD6A0       // Darker yellow/gold for housing
+// Colors
 #define COLOR_GOLD 0xFEA0        // Bright gold for the pins
 #define COLOR_BLACK 0x0000       // Empty space
 #define COLOR_SPRING 0x7BEF      // Silver/Grey for springs
@@ -37665,7 +37651,7 @@ bool moveRight = false;
 #define COLOR_GREEN 0x07E0       // Bright green for set pins
 #define COLOR_RED 0xF800         // Red shear line
 #define COLOR_ORANGE 0xFC00      // Orange accent line lockpick
-#define COLOR_BORDER_GOLD 0xD502 // #d4a017 → RGB565, matches SVG gold border
+#define COLOR_BORDER_GOLD 0xD502 
 #define COLOR_BOX_BLUE 0x10a5    // dark blue, same as menu panel
 #define COLOR_DARK_GREEN_FILL 0x1162
 #define COLOR_SELECTED_GREEN_FILL 0x19E3
@@ -37677,178 +37663,81 @@ bool moveRight = false;
 #define COLOR_SELECTED_RED_FILL 0x30A1
 #define COLOR_RED_BORDER 0xC904
 
-// GLOBAL VARIABLES FOR SWITCH PATTERN
+
+// Pointers
+#define LEDR_ptr ((volatile int *)LED_BASE)
+#define rotary_ptr ((volatile int *)ROTARY_BASE)
+
+#define JP1_DATA (*(rotary_ptr))
+#define JP1_DIR (*(rotary_ptr + 1))
+#define JP1_IE (*(rotary_ptr + 2))
+#define JP1_EDGE (*(rotary_ptr + 3))
+
+/* GLOBAL VARIABLES */
+
+// Video/ Buffers
+volatile int pixel_buffer_start; // global variable
+short int buffer1[240][512];
+short int buffer2[240][512];
+
+// Rotary encoder
+volatile int rotary_counter = 0;
+int target_rotary_start = 30;
+int target_rotary_end = 40;
+bool rotary_in_range = false;
+
+ // Input/ PS2
+bool ignoreNext = false; // A flag to catch the 0xF0 key-release byte
+bool moveLeft = false;
+bool moveRight = false;
+bool extendedKey = false; // For arrow keys
+
+ // Lock/ Pin
+int pinYPositions[NUM_PINS];
+int pinTargetY[NUM_PINS]; // Stores the unique red line height for each pin
+int pinSequence[NUM_PINS];
+
+int pickXPosition = 50; // Starting X position of the lockpick
+int currentPinIndex = 0;
+int currentSequenceIndex = 0; // Tracks which step of the sequence the player is on
+
+bool isHoldingW = false; // Tracks if pin is being held
+bool pinSet[NUM_PINS] = {false, false, false, false, false}; // Tracks which pins are picked
+
+int totalPinsUp = 0;
+
+// Switch pattern/ LEDs
 int targetPattern = 0;
 int matchedPins = 0;
 
-// GLOBAL VARIABLES FOR TIMER
+// Timer
 volatile int elapsedTime = 0;
 volatile int timerStarted = 0; // 0 not started
 
-// STATES
-#define MENU_STATE 0
-#define GAME_STATE 1
-#define END_STATE 2
-
+// Game flow
 int state = MENU_STATE;
-
-// DIFFICULTIES
-#define DIFF_EASY 0
-#define DIFF_MEDIUM 1
-#define DIFF_HARD 2
-
 int menuSelection = DIFF_EASY;
 int gameDifficulty = DIFF_EASY;
 bool gameWon = false;
 
-// FUNCTION DECLARATIONS
-// General purpose
-void clearScreen();
-void clearCharacter();
-void drawRectangle(int x0, int y0, int width, int height, short int color);
-void plot_pixel(int x, int y, short int line_color);
-void wait_for_vsync();
-
-// Drawing menu
-void writeCharacter(int x, int y, char c);
-void writeString(int x, int y, char *str);
-void drawMenu();
-void drawEndScreen();
-
-// Drawing lock
-void drawStaticLock();
-void drawDynamicElements();
-int readPS2(char *byte);
-void eraseDynamicElements();
-void drawSpring(int chamberX); // draws spring coil in a chamber
-void drawPadlockIcon(int x, int y, short int bodyColor,
-                     short int shackleColor); // basic padlock image
-
-// State changing
-int readKeys();
-void waitForRelease();
-void resetGameUIState();
+// Pause menu/ for testing
+bool isPaused = false;
+int pauseSelection = 0; // 0 Resume, 1 Restart
+bool resumedFromPause = false; // Flag to indicate if we're resuming from pause
 
 // Audio
-void playStartSound();
-void playSuccessSound();
-void playFailSound();
-
-// Matching switches
-int readSwitches();
-void updateLEDs(int lightLed);
-void matchPins(); // display the correct matched pins (in final game this would
-                  // not be dipslayed)
-
-// Timer functions
-static void handler(void) __attribute__((interrupt("machine")));
-void set_itimer(void);        // initialize timer
-void enable_interrupts(void); // enable interrupts
-void itimer_ISR(void);
-void drawTimer();
-
-// Pause/ for testing
-bool isPaused = false;
-int pauseSelection = 0;        // 0 Resume, 1 Restart
-bool resumedFromPause = false; // Flag to indicate if we're resuming from pause
-void drawPauseMenu();
-int totalPinsUp = 0;
-
-// Delete: #define SHEAR_LINE_Y 75
-int pinTargetY[NUM_PINS]; // Stores the unique red line height for each pin
-#define PIN_REST_Y 110
-
-// Game Design
-int currentPinIndex = 0;
-bool isHoldingW = false; // Tracks if pin is being held
-bool pinSet[NUM_PINS] = {false, false, false, false,
-                         false}; // Tracks which pins are picked
-int pinSequence[NUM_PINS];
-int currentSequenceIndex =
-    0; // Tracks which step of the sequence the player is on
-
-// ROTARY FUNCTIONS
-void drawRotaryBar(); // draws tension bar and label, locks and control
-                      // instruction
-
-// ps2 (for arrow keys) globals cant find other ones
-bool extendedKey = false;
-
-// --- AUDIO ENGINE GLOBALS ---
 int audioSamplesRemaining = 0;
 int audioCurrentFreq = 0;
 int audioWaveCounter = 0;
 int audioCurrentAmplitude = 0;
 int audioPhase = 0; // Tracks the 3 parts of the "Ding Ding" success sound
 
-// --- REALISTIC AUDIO ENGINE GLOBALS ---
-const short int *currentAudioArray =
-    NULL;                 // Points to the sound currently playing
+const short int *currentAudioArray = NULL; // Points to the sound currently playing
 int audioArrayLength = 0; // Total size of the sound
 int audioPlayIndex = 0;   // Our current position in the sound
 
-void triggerSuccessSound()
-{
-    currentAudioArray = (const short int *)(successSound + 44);
-
-    // THE FIX: Subtract 44 for the header, divide by 2 for the 16-bit shift,
-    // and then subtract 500 samples from the tail to chop off the garbage
-    // metadata!
-    audioArrayLength = ((sizeof(successSound) - 44) / 2) - 200;
-    audioPlayIndex = 0;
-}
-
-void triggerFailSound()
-{
-    // 1. Skip the 44-byte WAV header
-    // 2. Cast the remaining 8-bit array into 16-bit audio samples!
-    currentAudioArray =
-        (const short int *)(failSound +
-                            44); // <-- MAKE SURE THIS MATCHES YOUR ARRAY NAME
-
-    // 3. Calculate the length and chop 500 samples off the tail to prevent
-    // metadata static
-    audioArrayLength = ((sizeof(failSound) - 44) / 2) - 200;
-    audioPlayIndex = 0;
-}
-
-void triggerVictorySound()
-{
-    // 1. Skip the 44-byte WAV header
-    // 2. Cast the remaining 8-bit array into 16-bit audio samples!
-    currentAudioArray = (const short int *)(gameVictory + 44);
-
-    // 3. Calculate the length and chop 500 samples off the tail to prevent
-    // metadata static
-    audioArrayLength = ((sizeof(gameVictory) - 44) / 2) - 200;
-    audioPlayIndex = 0;
-}
-
-void triggerGameStart()
-{
-    // 1. Skip the 44-byte WAV header
-    // 2. Cast the remaining 8-bit array into 16-bit audio samples!
-    currentAudioArray = (const short int *)(gameStart + 44);
-
-    // 3. Calculate the length and chop 500 samples off the tail to prevent
-    // metadata static
-    audioArrayLength = ((sizeof(gameStart) - 44) / 2) - 200;
-    audioPlayIndex = 0;
-}
-
-void triggerGameFail()
-{
-    // 1. Skip the 44-byte WAV header
-    // 2. Cast the remaining 8-bit array into 16-bit audio samples!
-    currentAudioArray = (const short int *)(gameFail + 44);
-
-    // 3. Calculate the length and chop 500 samples off the tail to prevent
-    // metadata static
-    audioArrayLength = ((sizeof(gameFail) - 44) / 2) - 200;
-    audioPlayIndex = 0;
-}
-
-// Put this at the very top of your file!
+/* STRUCTS */
+// Audio
 struct audio_t
 {
     volatile unsigned int control;
@@ -37861,38 +37750,65 @@ struct audio_t
 };
 struct audio_t *const audiop = ((struct audio_t *)0xff203040);
 
-// Your beautifully upgraded, non-blocking Streaming Engine:
-void updateAudio()
-{
-    if (currentAudioArray == NULL || audioPlayIndex >= audioArrayLength)
-    {
-        return;
-    }
+/* FUNCTION DECLARATIONS */
+// General purpose
+void clearScreen();
+void clearCharacter();
+void drawRectangle(int x0, int y0, int width, int height, short int color);
+void plot_pixel(int x, int y, short int line_color);
+void wait_for_vsync();
 
-    // Find out how much room the speakers have right now using the clean struct!
-    int leftSpace = audiop->walc;
-    int rightSpace = audiop->warc;
-    int spaceToWrite = (leftSpace < rightSpace) ? leftSpace : rightSpace;
+// Drawing menu and end screen
+void writeCharacter(int x, int y, char c);
+void writeString(int x, int y, char *str);
+void drawMenu();
+void drawEndScreen();
+void drawPauseMenu();
 
-    // Rapidly feed the array into the hardware buffer without freezing the game
-    for (int i = 0; i < spaceToWrite; i++)
-    {
-        if (audioPlayIndex >= audioArrayLength)
-        {
-            currentAudioArray = NULL;
-            break;
-        }
+// Drawing lock
+void drawStaticLock();
+void drawDynamicElements();
+void eraseDynamicElements();
+void drawSpring(int chamberX); // draws spring coil in a chamber
+void drawPadlockIcon(int x, int y, short int bodyColor,
+                     short int shackleColor); // basic padlock image
 
-        // Grab the 16-bit sample and amplify it
-        int loudSample = ((int)currentAudioArray[audioPlayIndex]) << 15;
+void drawRotaryBar(); // draws tension bar and label, locks and control instruction
 
-        // Send it to the speakers using the clean struct!
-        audiop->ldata = loudSample;
-        audiop->rdata = loudSample;
+// Timer
+void drawTimer();
 
-        audioPlayIndex++;
-    }
-}
+// Inputs
+int readPS2(char *byte);
+int readKeys();
+void waitForRelease();
+void resetGameUIState();
+
+// Audio
+void playStartSound();
+void playSuccessSound();
+void playFailSound();
+
+void triggerSuccessSound();
+void triggerFailSound();
+void triggerVictorySound();
+void triggerGameStart();
+void triggerGameFail();
+void updateAudio();
+
+// Matching switches
+int readSwitches();
+void updateLEDs(int lightLed);
+void matchPins(); // display the correct matched pins (in final game this would not be dipslayed)
+
+// Timer functions
+static void handler(void) __attribute__((interrupt("machine")));
+void set_itimer(void);        // initialize timer
+void enable_interrupts(void); // enable interrupts
+void itimer_ISR(void);
+void rotary_ISR(void);
+
+/* MAIN GAME */
 
 int main(void)
 {
@@ -38207,10 +38123,9 @@ int main(void)
             }
 
             if (state != GAME_STATE)
-{
-    continue;
-}
-
+            {
+                continue;
+            }
 
             if (isPaused)
             {
@@ -38366,6 +38281,8 @@ int main(void)
     }
 }
 
+/* HELPER FUNCTIONS */
+
 void drawMenu()
 {
     for (int y = 0; y < 240; y++)
@@ -38443,7 +38360,7 @@ void drawEndScreen()
 
     drawRectangle(boxX, boxY, boxW, bdr, COLOR_BORDER_GOLD); /* top    */
     drawRectangle(boxX, boxY + boxH - bdr, boxW, bdr,
-                  COLOR_BORDER_GOLD);                        /* bottom */
+                  COLOR_BORDER_GOLD);                         /* bottom */
     drawRectangle(boxX, boxY, bdr, boxH, COLOR_BORDER_GOLD); /* left   */
     drawRectangle(boxX + boxW - bdr, boxY, bdr, boxH,
                   COLOR_BORDER_GOLD); /* right  */
@@ -38469,6 +38386,45 @@ void drawEndScreen()
     }
 }
 
+void drawPauseMenu()
+{
+    int boxX = 80, boxY = 80;
+    int boxW = 160, boxH = 80;
+    int bdr = 3;
+    int barX = boxX + 8;
+    int barW = boxW - 16;
+
+    drawRectangle(boxX, boxY, boxW, boxH, COLOR_BOX_BLUE);
+    drawRectangle(boxX, boxY, boxW, bdr, COLOR_BORDER_GOLD);
+    drawRectangle(boxX, boxY + boxH - bdr, boxW, bdr, COLOR_BORDER_GOLD);
+    drawRectangle(boxX, boxY, bdr, boxH, COLOR_BORDER_GOLD);
+    drawRectangle(boxX + boxW - bdr, boxY, bdr, boxH, COLOR_BORDER_GOLD);
+
+    writeString(37, 22, "PAUSED");
+
+    // Resume
+    if (pauseSelection == 0)
+    {
+        drawRectangle(barX, 103, barW, 13, COLOR_DARK_GREEN_FILL); /* highlight */
+        writeString(37, 27, "RESUME");
+    }
+    else
+    {
+        writeString(37, 27, "RESUME");
+    }
+
+    // Return to home
+    if (pauseSelection == 1)
+    {
+        drawRectangle(barX, 123, barW, 13, COLOR_DARK_GREEN_FILL); /* highlight */
+        writeString(33, 32, "RETURN TO HOME");
+    }
+    else
+    {
+        writeString(33, 32, "RETURN TO HOME");
+    }
+}
+
 // Clears the entire screen black at the start
 void clearScreen()
 {
@@ -38481,21 +38437,6 @@ void clearScreen()
             plot_pixel(i, j, 0x0000);
         }
     }
-}
-
-// Formats the elapsed time and prints it to the top right of the character
-// buffer
-void drawTimer()
-{
-    char timeStr[20];
-
-    // Format the string. "%03d" ensures it always takes up 3 digits (e.g., 001,
-    // 015, 120)
-    snprintf(timeStr, sizeof(timeStr), "TIME: %03d", elapsedTime);
-
-    // X = 68 (near the right edge of the 80-column grid)
-    // Y = 2  (near the top of the 60-row grid)
-    writeString(68, 4, timeStr);
 }
 
 // Writes character
@@ -38550,6 +38491,41 @@ void clearCharacter()
     }
 }
 
+// Formats the elapsed time and prints it to the top right of the character
+// buffer
+void drawTimer()
+{
+    char timeStr[20];
+
+    // Format the string. "%03d" ensures it always takes up 3 digits (e.g., 001,
+    // 015, 120)
+    snprintf(timeStr, sizeof(timeStr), "TIME: %03d", elapsedTime);
+
+    // X = 68 (near the right edge of the 80-column grid)
+    // Y = 2  (near the top of the 60-row grid)
+    writeString(68, 4, timeStr);
+}
+
+void wait_for_vsync()
+{
+    volatile int *pixel_ctrl_ptr = (int *)0xFF203020;
+    register int status;
+
+    *pixel_ctrl_ptr = 1; // Store a 1 into the Buffer to request the swap
+
+    // wait for status = 0
+    status = *(pixel_ctrl_ptr + 3);
+    while ((status & 0x01) != 0)
+    {
+        // --- THE MAGIC FIX ---
+        // While the CPU is trapped here waiting for the monitor to refresh,
+        // force it to continuously feed the audio hardware!
+        updateAudio();
+
+        status = *(pixel_ctrl_ptr + 3);
+    }
+}
+
 void drawSpring(int chamberX)
 {
     // 6 alternating stripes: silver / dark-gray
@@ -38561,49 +38537,6 @@ void drawSpring(int chamberX)
     }
 }
 
-// // Draws the static lock
-// void drawStaticLock()
-// {
-//   // Declare the variables locally inside the function!
-//   int lineThickness = 3;
-//   int marginOffset = 3; // <-- Capital 'O'
-
-//   if (gameDifficulty == DIFF_MEDIUM)
-//   {
-//     lineThickness = 2;
-//     marginOffset = 2;
-//   }
-//   else if (gameDifficulty == DIFF_HARD)
-//   {
-//     lineThickness = 1;
-//     marginOffset = 1;
-//   }
-
-//   // Background for the entire screen
-//   drawRectangle(0, 0, 320, 240, COLOR_WOOD);
-
-//   // Back plate
-//   drawRectangle(LOCK_BASE_X + 20, LOCK_BASE_Y - 20, LOCK_WIDTH - 40, 20,
-//                 COLOR_BRASS);
-//   // Heavy main body
-//   drawRectangle(LOCK_BASE_X, LOCK_BASE_Y, LOCK_WIDTH, LOCK_HEIGHT,
-//   COLOR_BRASS);
-
-//   // Horizontal pick
-//   drawRectangle(20, 130, 280, 24, COLOR_BLACK);
-
-//   // 5 pin chambers and their springs
-//   for (int i = 0; i < NUM_PINS; i++)
-//   {
-//     // Space them out evenly across the lock base
-//     int chamber_x = LOCK_BASE_X + 25 + (i * 32);
-
-//     // Draw the empty black chamber track extending upwards
-//     drawRectangle(chamber_x, LOCK_BASE_Y, CHAMBER_WIDTH, 90, COLOR_BLACK);
-//     drawRectangle(chamber_x, pinTargetY[i] - marginOffset, CHAMBER_WIDTH,
-//                   lineThickness, 0xF800);
-//   }
-// }
 
 void drawStaticLock()
 {
@@ -38624,24 +38557,6 @@ void drawStaticLock()
     for (int y = 0; y < 240; y++)
         for (int x = 0; x < 320; x++)
             plot_pixel(x, y, lock_background[y * 320 + x]);
-
-    // Back plate (top overhang of the lock body)
-    // drawRectangle(LOCK_BASE_X + 20, LOCK_BASE_Y - 20,
-    //               LOCK_WIDTH - 40, 20, COLOR_BRASS);
-
-    // // Main brass lock body
-    // drawRectangle(LOCK_BASE_X, LOCK_BASE_Y, LOCK_WIDTH, LOCK_HEIGHT,
-    // COLOR_BRASS);
-
-    // // Corner rivets on the body
-    // drawRectangle(LOCK_BASE_X + 8,               LOCK_BASE_Y + 8, 4, 4,
-    // COLOR_GOLD); drawRectangle(LOCK_BASE_X + LOCK_WIDTH - 12, LOCK_BASE_Y + 8,
-    // 4, 4, COLOR_GOLD); drawRectangle(LOCK_BASE_X + 8,               LOCK_BASE_Y
-    // + LOCK_HEIGHT - 12, 4, 4, COLOR_GOLD); drawRectangle(LOCK_BASE_X +
-    // LOCK_WIDTH - 12, LOCK_BASE_Y + LOCK_HEIGHT - 12, 4, 4, COLOR_GOLD);
-
-    // // Horizontal pick keyhole track
-    // drawRectangle(20, 130, 280, 24, COLOR_BLACK);
 
     // 5 pin chambers with springs and per-game shear lines
     for (int i = 0; i < NUM_PINS; i++)
@@ -38673,10 +38588,6 @@ void drawStaticLock()
         }
     }
 }
-
-// Assuming these variables are declared globally in the main game loop:
-// int pinYPosition[NUM_PINS]; // Ranging roughly from Y=90 (up) to Y=110
-// (resting down) int pick_x_position;           // Ranging from X=30 to X=200
 
 void drawDynamicElements()
 {
@@ -38753,21 +38664,6 @@ void drawDynamicElements()
 
     drawRectangle(pickXPosition, tipTopY, 4, 142 - tipTopY, COLOR_PICK);
     drawRectangle(pickXPosition - 4, tipTopY, 4, 4, COLOR_PICK);
-}
-
-int readKeys()
-{
-    volatile int *keyPtr = (int *)KEY_BASE;
-    return *keyPtr;
-}
-
-// Pauses the game until the user takes their finger off the button
-void waitForRelease()
-{
-    while (readKeys() != 0)
-    {
-        // Do nothing, just wait
-    }
 }
 
 // Paints over the specific tracks to erase the old pick and springs
@@ -38889,6 +38785,21 @@ void drawRotaryBar()
     writeString(2, 58, "W:LIFT  A D:MOVE  C X:TURN");
 }
 
+int readKeys()
+{
+    volatile int *keyPtr = (int *)KEY_BASE;
+    return *keyPtr;
+}
+
+// Pauses the game until the user takes their finger off the button
+void waitForRelease()
+{
+    while (readKeys() != 0)
+    {
+        // Do nothing, just wait
+    }
+}
+
 // Reads a single byte from the PS/2 keyboard buffer
 // Returns 1 if a key was pressed, 0 if the buffer is empty
 int readPS2(char *byte)
@@ -38906,26 +38817,6 @@ int readPS2(char *byte)
     return 0;
 }
 
-void wait_for_vsync()
-{
-    volatile int *pixel_ctrl_ptr = (int *)0xFF203020;
-    register int status;
-
-    *pixel_ctrl_ptr = 1; // Store a 1 into the Buffer to request the swap
-
-    // wait for status = 0
-    status = *(pixel_ctrl_ptr + 3);
-    while ((status & 0x01) != 0)
-    {
-        // --- THE MAGIC FIX ---
-        // While the CPU is trapped here waiting for the monitor to refresh,
-        // force it to continuously feed the audio hardware!
-        updateAudio();
-
-        status = *(pixel_ctrl_ptr + 3);
-    }
-}
-
 // Read the switches 0-3
 int readSwitches()
 {
@@ -38937,8 +38828,7 @@ int readSwitches()
 
 void updateLEDs(int ledToLight)
 {
-    volatile int *led = (int *)LED_BASE;
-    *led = ledToLight;
+    *LEDR_ptr = ledToLight;
 }
 
 // Match the pins and display on led
@@ -39095,45 +38985,6 @@ void rotary_ISR(void)
     JP1_EDGE = 0xFFFFFFFF; // clear edge capture
 }
 
-void drawPauseMenu()
-{
-    int boxX = 80, boxY = 80;
-    int boxW = 160, boxH = 80;
-    int bdr = 3;
-    int barX = boxX + 8;
-    int barW = boxW - 16;
-
-    drawRectangle(boxX, boxY, boxW, boxH, COLOR_BOX_BLUE);
-    drawRectangle(boxX, boxY, boxW, bdr, COLOR_BORDER_GOLD);
-    drawRectangle(boxX, boxY + boxH - bdr, boxW, bdr, COLOR_BORDER_GOLD);
-    drawRectangle(boxX, boxY, bdr, boxH, COLOR_BORDER_GOLD);
-    drawRectangle(boxX + boxW - bdr, boxY, bdr, boxH, COLOR_BORDER_GOLD);
-
-    writeString(37, 22, "PAUSED");
-
-    // Resume
-    if (pauseSelection == 0)
-    {
-        drawRectangle(barX, 103, barW, 13, COLOR_DARK_GREEN_FILL); /* highlight */
-        writeString(37, 27, "RESUME");
-    }
-    else
-    {
-        writeString(37, 27, "RESUME");
-    }
-
-    // Return to home
-    if (pauseSelection == 1)
-    {
-        drawRectangle(barX, 123, barW, 13, COLOR_DARK_GREEN_FILL); /* highlight */
-        writeString(33, 32, "RETURN TO HOME");
-    }
-    else
-    {
-        writeString(33, 32, "RETURN TO HOME");
-    }
-}
-
 void resetGameUIState()
 {
     // Clear gameplay-only UI / state before going back to menu
@@ -39156,4 +39007,98 @@ void resetGameUIState()
 
     updateLEDs(0);    // clear LEDs
     clearCharacter(); // clear TIME / TENSION / controls text
+}
+
+// Audio Helper Functions
+void triggerSuccessSound()
+{
+    currentAudioArray = (const short int *)(successSound + 44);
+
+    // THE FIX: Subtract 44 for the header, divide by 2 for the 16-bit shift,
+    // and then subtract 500 samples from the tail to chop off the garbage
+    // metadata!
+    audioArrayLength = ((sizeof(successSound) - 44) / 2) - 200;
+    audioPlayIndex = 0;
+}
+
+void triggerFailSound()
+{
+    // 1. Skip the 44-byte WAV header
+    // 2. Cast the remaining 8-bit array into 16-bit audio samples!
+    currentAudioArray =
+        (const short int *)(failSound +
+                            44); // <-- MAKE SURE THIS MATCHES YOUR ARRAY NAME
+
+    // 3. Calculate the length and chop 500 samples off the tail to prevent
+    // metadata static
+    audioArrayLength = ((sizeof(failSound) - 44) / 2) - 200;
+    audioPlayIndex = 0;
+}
+
+void triggerVictorySound()
+{
+    // 1. Skip the 44-byte WAV header
+    // 2. Cast the remaining 8-bit array into 16-bit audio samples!
+    currentAudioArray = (const short int *)(gameVictory + 44);
+
+    // 3. Calculate the length and chop 500 samples off the tail to prevent
+    // metadata static
+    audioArrayLength = ((sizeof(gameVictory) - 44) / 2) - 200;
+    audioPlayIndex = 0;
+}
+
+void triggerGameStart()
+{
+    // 1. Skip the 44-byte WAV header
+    // 2. Cast the remaining 8-bit array into 16-bit audio samples!
+    currentAudioArray = (const short int *)(gameStart + 44);
+
+    // 3. Calculate the length and chop 500 samples off the tail to prevent
+    // metadata static
+    audioArrayLength = ((sizeof(gameStart) - 44) / 2) - 200;
+    audioPlayIndex = 0;
+}
+
+void triggerGameFail()
+{
+    // 1. Skip the 44-byte WAV header
+    // 2. Cast the remaining 8-bit array into 16-bit audio samples!
+    currentAudioArray = (const short int *)(gameFail + 44);
+
+    // 3. Calculate the length and chop 500 samples off the tail to prevent
+    // metadata static
+    audioArrayLength = ((sizeof(gameFail) - 44) / 2) - 200;
+    audioPlayIndex = 0;
+}
+
+void updateAudio()
+{
+    if (currentAudioArray == NULL || audioPlayIndex >= audioArrayLength)
+    {
+        return;
+    }
+
+    // Find out how much room the speakers have right now using the clean struct!
+    int leftSpace = audiop->walc;
+    int rightSpace = audiop->warc;
+    int spaceToWrite = (leftSpace < rightSpace) ? leftSpace : rightSpace;
+
+    // Rapidly feed the array into the hardware buffer without freezing the game
+    for (int i = 0; i < spaceToWrite; i++)
+    {
+        if (audioPlayIndex >= audioArrayLength)
+        {
+            currentAudioArray = NULL;
+            break;
+        }
+
+        // Grab the 16-bit sample and amplify it
+        int loudSample = ((int)currentAudioArray[audioPlayIndex]) << 15;
+
+        // Send it to the speakers using the clean struct!
+        audiop->ldata = loudSample;
+        audiop->rdata = loudSample;
+
+        audioPlayIndex++;
+    }
 }
