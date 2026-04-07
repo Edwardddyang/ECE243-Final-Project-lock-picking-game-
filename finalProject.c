@@ -37606,7 +37606,6 @@ const unsigned char gameFail[] = {
     0x54, 0x58, 0x58, 0x58, 0x00, 0x00, 0x00, 0x17, 0x00, 0x00, 0x00, 0x53,
     0x6F, 0x66, 0x74, 0x77, 0x61, 0x72, 0x65, 0x00, 0x4C, 0x61, 0x76, 0x66,
     0x36, 0x30, 0x2E, 0x31, 0x36, 0x2E, 0x31, 0x30, 0x30, 0x00};
-
 /* DEFINES */
 
 // Memory mapped addresses
@@ -37831,54 +37830,37 @@ int main(void)
 
     unsigned int counter = 0;
 
-    updateLEDs(0); // Clear LEDs in menu
+    updateLEDs(0);  // Clear LEDs in menu
 
-    while (1)
-    {
-        if (state == MENU_STATE)
-        {
+    while (1) {
+        if (state == MENU_STATE) {
             drawMenu();
             timerStarted = 0;
             counter++;
 
             char keyByte;
-            while (readPS2(&keyByte))
-            {
-                if (keyByte == (char)0xE0)
-                {
-                    extendedKey = true; // Arrow keys send an E0 byte first
-                }
-                else if (keyByte == (char)0xF0)
-                {
-                    ignoreNext = true; // Key release coming up
-                }
-                else if (ignoreNext)
-                {
-                    ignoreNext = false; // Ignore key releases in the menu
+            while (readPS2(&keyByte)) {
+                if (keyByte == (char)0xE0) {
+                    extendedKey = true;  // Arrow keys send an E0 byte first
+                } else if (keyByte == (char)0xF0) {
+                    ignoreNext = true;  // Key release coming up
+                } else if (ignoreNext) {
+                    ignoreNext = false;  // Ignore key releases in the menu
                     extendedKey = false;
-                }
-                else
-                {
+                } else {
                     // KEY PRESSED
-                    bool isUp = (!extendedKey && keyByte == (char)0x1D) ||   // W
-                                (extendedKey && keyByte == (char)0x75);      // Up arrow
-                    bool isDown = (!extendedKey && keyByte == (char)0x1B) || // S
-                                  (extendedKey && keyByte == (char)0x72);    // Down arrow
+                    bool isUp = (!extendedKey && keyByte == (char)0x1D) ||    // W
+                                (extendedKey && keyByte == (char)0x75);       // Up arrow
+                    bool isDown = (!extendedKey && keyByte == (char)0x1B) ||  // S
+                                  (extendedKey && keyByte == (char)0x72);     // Down arrow
 
                     extendedKey = false;
 
-                    if (isUp)
-                    {
-                        if (menuSelection > 0)
-                            menuSelection--;
-                    }
-                    else if (isDown)
-                    {
-                        if (menuSelection < 2)
-                            menuSelection++;
-                    }
-                    else if (keyByte == (char)0x5A)
-                    {
+                    if (isUp) {
+                        if (menuSelection > 0) menuSelection--;
+                    } else if (isDown) {
+                        if (menuSelection < 2) menuSelection++;
+                    } else if (keyByte == (char)0x5A) {
                         // Enter pressed, start the game with the selected difficulty
                         gameDifficulty = menuSelection;
 
@@ -37887,19 +37869,15 @@ int main(void)
                         srand(counter);
 
                         // Generate 5 perfectly unique random pins out of thin air
-                        for (int i = 0; i < NUM_PINS; i++)
-                        {
+                        for (int i = 0; i < NUM_PINS; i++) {
                             int randomPin;
                             bool isDuplicate;
 
-                            do
-                            {
+                            do {
                                 randomPin = rand() % NUM_PINS;
                                 isDuplicate = false;
-                                for (int j = 0; j < i; j++)
-                                {
-                                    if (pinSequence[j] == randomPin)
-                                    {
+                                for (int j = 0; j < i; j++) {
+                                    if (pinSequence[j] == randomPin) {
                                         isDuplicate = true;
                                         break;
                                     }
@@ -37927,8 +37905,7 @@ int main(void)
 
                         // Randomize starting position, but keep it at least 30 away from
                         // the zone
-                        do
-                        {
+                        do {
                             rotary_counter = rand() % 256;
                         } while (rotary_counter >= target_rotary_start - 30 &&
                                  rotary_counter <= target_rotary_end + 30);
@@ -37946,28 +37923,19 @@ int main(void)
                     }
                 }
             }
-        }
-        else if (state == GAME_STATE)
-        {
+        } else if (state == GAME_STATE) {
             char keyByte;
-            while (readPS2(&keyByte))
-            {
-                if (keyByte == (char)0xE0)
-                {
+            while (readPS2(&keyByte)) {
+                if (keyByte == (char)0xE0) {
                     extendedKey = true;
-                }
-                else if (keyByte == (char)0xF0)
-                {
+                } else if (keyByte == (char)0xF0) {
                     ignoreNext = true;
-                }
-                else if (ignoreNext)
-                {
+                } else if (ignoreNext) {
                     ignoreNext = false;
                     extendedKey = false;
 
                     // Key released is W or up arrow and game not paused
-                    if (!isPaused && (keyByte == (char)0x1D || keyByte == (char)0x75))
-                    {
+                    if (!isPaused && (keyByte == (char)0x1D || keyByte == (char)0x75)) {
                         isHoldingW = false;
                         // Was W release it while the gap was on the line?
                         int margin = 3;
@@ -37975,28 +37943,21 @@ int main(void)
                             margin = 2;
                         else if (gameDifficulty == DIFF_HARD)
                             margin = 1;
-                        if (!pinSet[currentPinIndex])
-                        {
+                        if (!pinSet[currentPinIndex]) {
                             // Check against THIS specific pin's random target height!
                             if (pinYPositions[currentPinIndex] >=
                                     pinTargetY[currentPinIndex] - margin &&
                                 pinYPositions[currentPinIndex] <=
-                                    pinTargetY[currentPinIndex] + margin)
-                            {
+                                    pinTargetY[currentPinIndex] + margin) {
                                 // --- THE SEQUENCE CHECK ---
-                                if (currentPinIndex == pinSequence[currentSequenceIndex])
-                                {
+                                if (currentPinIndex == pinSequence[currentSequenceIndex]) {
                                     pinSet[currentPinIndex] = true;
                                     currentSequenceIndex++;
-                                    if (currentSequenceIndex < NUM_PINS)
-                                    {
+                                    if (currentSequenceIndex < NUM_PINS) {
                                         triggerSuccessSound();
                                     }
-                                }
-                                else
-                                {
-                                    for (int i = 0; i < NUM_PINS; i++)
-                                    {
+                                } else {
+                                    for (int i = 0; i < NUM_PINS; i++) {
                                         pinSet[i] = false;
                                     }
                                     triggerFailSound();
@@ -38005,53 +37966,41 @@ int main(void)
                             }
                         }
                     }
-                }
-                else
-                {
+                } else {
                     // Key pressed
-                    if (keyByte == (char)0x76)
-                    { // ESC = pause
-                        if (isPaused)
-                        {
+                    if (keyByte == (char)0x76) {  // ESC = pause
+                        if (isPaused) {
                             isPaused = false;
                             pauseSelection = 0;
                             clearCharacter();
                             resumedFromPause = true;
-                        }
-                        else
-                        {
+                        } else {
                             isPaused = true;
                             pauseSelection = 0;
                         }
-                        extendedKey = false; // reset after use
+                        extendedKey = false;  // reset after use
                         continue;
                     }
 
                     // Pause menu selection
-                    if (isPaused)
-                    {
+                    if (isPaused) {
                         bool isUp = (!extendedKey && keyByte == (char)0x1D) ||
                                     (extendedKey && keyByte == (char)0x75);
                         bool isDown = (!extendedKey && keyByte == (char)0x1B) ||
                                       (extendedKey && keyByte == (char)0x72);
 
-                        if (isUp && pauseSelection > 0)
-                            pauseSelection--;
-                        if (isDown && pauseSelection < 1)
-                            pauseSelection++;
+                        if (isUp && pauseSelection > 0) pauseSelection--;
+                        if (isDown && pauseSelection < 1) pauseSelection++;
 
                         if (keyByte == (char)0x5A) /* Enter */
                         {
-                            if (pauseSelection == 0)
-                            {
+                            if (pauseSelection == 0) {
                                 /* RESUME */
                                 isPaused = false;
                                 pauseSelection = 0;
                                 clearCharacter();
                                 resumedFromPause = true;
-                            }
-                            else
-                            {
+                            } else {
                                 /* RETURN TO HOME */
                                 resetGameUIState();
                                 state = MENU_STATE;
@@ -38064,16 +38013,15 @@ int main(void)
                     }
 
                     // For testing
-                    if (keyByte == (char)0x45) // 0 -> instant fail
+                    if (keyByte == (char)0x45)  // 0 -> instant fail
                     {
-                        elapsedTime = 1000; // Set to a high number to trigger game over on
-                                            // next check
+                        elapsedTime = 1000;  // Set to a high number to trigger game over on
+                                             // next check
                     }
 
-                    if (keyByte == (char)0x16) // 1 -> instant win
+                    if (keyByte == (char)0x16)  // 1 -> instant win
                     {
-                        for (int i = 0; i < NUM_PINS; i++)
-                            pinSet[i] = true;
+                        for (int i = 0; i < NUM_PINS; i++) pinSet[i] = true;
                         currentSequenceIndex = NUM_PINS;
                     }
 
@@ -38085,50 +38033,34 @@ int main(void)
                     bool isUp = (!extendedKey && keyByte == (char)0x1D) ||    // W
                                 (extendedKey && keyByte == (char)0x75);       // Up arrow
 
-                    extendedKey = false; // reset after use
+                    extendedKey = false;  // reset after use
 
-                    if (isLeft && !isHoldingW)
-                    {
-                        if (currentPinIndex > 0)
-                            currentPinIndex--;
-                    }
-                    else if (isRight && !isHoldingW)
-                    {
-                        if (currentPinIndex < NUM_PINS - 1)
-                            currentPinIndex++;
-                    }
-                    else if (isUp)
-                    {
-                        if (!pinSet[currentPinIndex] && rotary_in_range)
-                        {
+                    if (isLeft && !isHoldingW) {
+                        if (currentPinIndex > 0) currentPinIndex--;
+                    } else if (isRight && !isHoldingW) {
+                        if (currentPinIndex < NUM_PINS - 1) currentPinIndex++;
+                    } else if (isUp) {
+                        if (!pinSet[currentPinIndex] && rotary_in_range) {
                             isHoldingW = true;
                         }
                         // rotary keys
-                    }
-                    else if (keyByte == (char)0x21)
-                    { // C = clockwise
+                    } else if (keyByte == (char)0x21) {  // C = clockwise
                         rotary_counter++;
-                        if (rotary_counter > 255)
-                            rotary_counter = 0;
+                        if (rotary_counter > 255) rotary_counter = 0;
                         *LEDR_ptr = rotary_counter;
-                    }
-                    else if (keyByte == (char)0x22)
-                    { // X = counter-clockwise
+                    } else if (keyByte == (char)0x22) {  // X = counter-clockwise
                         rotary_counter--;
-                        if (rotary_counter < 0)
-                            rotary_counter = 255;
+                        if (rotary_counter < 0) rotary_counter = 255;
                         *LEDR_ptr = rotary_counter;
                     }
                 }
             }
 
-            if (state != GAME_STATE)
-            {
+            if (state != GAME_STATE) {
                 continue;
             }
 
-            if (isPaused)
-            {
+            if (isPaused) {
                 drawPauseMenu();
                 updateAudio();
                 wait_for_vsync();
@@ -38136,8 +38068,7 @@ int main(void)
                 continue;
             }
 
-            if (resumedFromPause)
-            {
+            if (resumedFromPause) {
                 pixel_buffer_start = (int)&buffer1;
                 drawStaticLock();
                 pixel_buffer_start = (int)&buffer2;
@@ -38146,31 +38077,22 @@ int main(void)
             }
 
             // Game physics
-            if (isHoldingW)
-            {
+            if (isHoldingW) {
                 // Lift the pin while holding W
-                if (rotary_in_range)
-                {
+                if (rotary_in_range) {
                     pinYPositions[currentPinIndex] -= 1;
                     if (pinYPositions[currentPinIndex] < 65)
-                        pinYPositions[currentPinIndex] = 65; // Ceiling
+                        pinYPositions[currentPinIndex] = 65;  // Ceiling
+                } else {
+                    isHoldingW = false;  // If they move out of the rotary range while
+                                         // lifting, drop the pin immediately
                 }
-                else
-                {
-                    isHoldingW = false; // If they move out of the rotary range while
-                                        // lifting, drop the pin immediately
-                }
-            }
-            else
-            {
+            } else {
                 // Gravity
-                for (int i = 0; i < NUM_PINS; i++)
-                {
-                    if (!pinSet[i] && pinYPositions[i] < PIN_REST_Y)
-                    {
-                        pinYPositions[i] += 4; // Fall fast
-                        if (pinYPositions[i] > PIN_REST_Y)
-                            pinYPositions[i] = PIN_REST_Y;
+                for (int i = 0; i < NUM_PINS; i++) {
+                    if (!pinSet[i] && pinYPositions[i] < PIN_REST_Y) {
+                        pinYPositions[i] += 4;  // Fall fast
+                        if (pinYPositions[i] > PIN_REST_Y) pinYPositions[i] = PIN_REST_Y;
                     }
                 }
             }
@@ -38185,22 +38107,17 @@ int main(void)
             updateAudio();
 
             int maxTime = 180;
-            if (gameDifficulty == DIFF_MEDIUM)
-                maxTime = 120;
-            if (gameDifficulty == DIFF_HARD)
-                maxTime = 60;
+            if (gameDifficulty == DIFF_MEDIUM) maxTime = 120;
+            if (gameDifficulty == DIFF_HARD) maxTime = 60;
 
             int setTotal = 0;
-            for (int i = 0; i < NUM_PINS; i++)
-            {
-                if (pinSet[i])
-                    setTotal++;
+            for (int i = 0; i < NUM_PINS; i++) {
+                if (pinSet[i]) setTotal++;
             }
 
             totalPinsUp = setTotal;
 
-            if (totalPinsUp == NUM_PINS)
-            {
+            if (totalPinsUp == NUM_PINS) {
                 triggerVictorySound();
                 timerStarted = 0;
                 gameWon = true;
@@ -38216,9 +38133,7 @@ int main(void)
                 drawEndScreen();
 
                 state = END_STATE;
-            }
-            else if (elapsedTime >= maxTime)
-            {
+            } else if (elapsedTime >= maxTime) {
                 triggerGameFail();
                 timerStarted = 0;
                 gameWon = false;
@@ -38235,30 +38150,20 @@ int main(void)
                 drawEndScreen();
 
                 state = END_STATE;
-            }
-            else
-            {
+            } else {
                 // Game is still actively running
                 // updateLEDs(elapsedTime);
                 drawTimer();
                 drawRotaryBar();
             }
-        }
-        else if (state == END_STATE)
-        {
+        } else if (state == END_STATE) {
             char keyByte;
-            while (readPS2(&keyByte))
-            {
-                if (keyByte == (char)0xF0)
-                {
+            while (readPS2(&keyByte)) {
+                if (keyByte == (char)0xF0) {
                     ignoreNext = true;
-                }
-                else if (ignoreNext)
-                {
+                } else if (ignoreNext) {
                     ignoreNext = false;
-                }
-                else if (keyByte == 0x5A)
-                {
+                } else if (keyByte == 0x5A) {
                     /* Enter — back to menu */
                     resetGameUIState();
                     state = MENU_STATE;
@@ -38270,12 +38175,9 @@ int main(void)
         *(pixel_ctrl_ptr + 1) = pixel_buffer_start;
         wait_for_vsync();
 
-        if (pixel_buffer_start == (int)&buffer1)
-        {
+        if (pixel_buffer_start == (int)&buffer1) {
             pixel_buffer_start = (int)&buffer2;
-        }
-        else
-        {
+        } else {
             pixel_buffer_start = (int)&buffer1;
         }
     }
@@ -38474,7 +38376,7 @@ void drawRectangle(int x0, int y0, int width, int height, short int color)
 void plot_pixel(int x, int y, short int line_color)
 {
     volatile short int *one_pixel_address;
-    one_pixel_address = pixel_buffer_start + (y << 10) + (x << 1);
+    one_pixel_address = (volatile short int *)(pixel_buffer_start + (y << 10) + (x << 1));
     *one_pixel_address = line_color;
 }
 
