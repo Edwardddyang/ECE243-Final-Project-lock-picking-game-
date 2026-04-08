@@ -25624,8 +25624,8 @@ const unsigned short main_menu_bg[] = {
     0x0022, 0x0022, 0x0022, 0x0022, 0x0022, 0x0022, 0x0022, 0x0022, 0x0022,
     0x0022, 0x0022, 0x0022};
 
+//Sucess lock pick audio 
 const unsigned char successSound[] = {
-    // PASTE ALL YOUR HEX CODES HERE!
     0x52, 0x49, 0x46, 0x46, 0xDC, 0x15, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45,
     0x66, 0x6D, 0x74, 0x20, 0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
     0x40, 0x1F, 0x00, 0x00, 0x80, 0x3E, 0x00, 0x00, 0x02, 0x00, 0x10, 0x00,
@@ -26094,6 +26094,7 @@ const unsigned char successSound[] = {
     0x00, 0x53, 0x6F, 0x66, 0x74, 0x77, 0x61, 0x72, 0x65, 0x00, 0x4C, 0x61,
     0x76, 0x66, 0x36, 0x30, 0x2E, 0x31, 0x36, 0x2E, 0x31, 0x30, 0x30, 0x00};
 
+//Unsucessfull lock pick audio 
 const unsigned char failSound[] = {
     0x52, 0x49, 0x46, 0x46, 0x0C, 0x51, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45,
     0x66, 0x6D, 0x74, 0x20, 0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
@@ -27826,6 +27827,7 @@ const unsigned char failSound[] = {
     0x02, 0x00, 0xFE, 0xFF, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0xFE, 0xFF,
     0x02, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x02, 0x00};
 
+//Game won audio 
 const unsigned char gameVictory[] = {
     0x52, 0x49, 0x46, 0x46, 0x48, 0x86, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45,
     0x66, 0x6D, 0x74, 0x20, 0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
@@ -30694,6 +30696,7 @@ const unsigned char gameVictory[] = {
     0x10, 0x00, 0x0C, 0x00, 0x03, 0x00, 0xF0, 0xFF, 0xDC, 0xFF, 0xEE, 0xFF,
     0xFC, 0xFF, 0x0A, 0x00};
 
+//Game stard audio 
 const unsigned char gameStart[] = {
     0x52, 0x49, 0x46, 0x46, 0x32, 0x43, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45,
     0x66, 0x6D, 0x74, 0x20, 0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
@@ -32131,6 +32134,7 @@ const unsigned char gameStart[] = {
     0x65, 0x00, 0x46, 0x4C, 0x20, 0x53, 0x74, 0x75, 0x64, 0x69, 0x6F, 0x20,
     0x31, 0x31};
 
+//Game lost audio 
 const unsigned char gameFail[] = {
     0x52, 0x49, 0x46, 0x46, 0x8E, 0x00, 0x01, 0x00, 0x57, 0x41, 0x56, 0x45,
     0x66, 0x6D, 0x74, 0x20, 0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
@@ -37725,12 +37729,6 @@ int pauseSelection = 0; // 0 Resume, 1 Restart
 bool resumedFromPause = false; // Flag to indicate if we're resuming from pause
 
 // Audio
-int audioSamplesRemaining = 0;
-int audioCurrentFreq = 0;
-int audioWaveCounter = 0;
-int audioCurrentAmplitude = 0;
-int audioPhase = 0; // Tracks the 3 parts of the "Ding Ding" success sound
-
 const short int *currentAudioArray = NULL; // Points to the sound currently playing
 int audioArrayLength = 0; // Total size of the sound
 int audioPlayIndex = 0;   // Our current position in the sound
@@ -37873,6 +37871,7 @@ int main(void)
                             int randomPin;
                             bool isDuplicate;
 
+                            //Make sure there isnt a duplicate height pin 
                             do {
                                 randomPin = rand() % NUM_PINS;
                                 isDuplicate = false;
@@ -37884,6 +37883,7 @@ int main(void)
                                 }
                             } while (isDuplicate);
 
+                            //Initialize the variables of the pins 
                             pinSequence[i] = randomPin;
                             pinYPositions[i] = PIN_REST_Y;
                             pinSet[i] = false;
@@ -37937,25 +37937,28 @@ int main(void)
                     // Key released is W or up arrow and game not paused
                     if (!isPaused && (keyByte == (char)0x1D || keyByte == (char)0x75)) {
                         isHoldingW = false;
-                        // Was W release it while the gap was on the line?
+                        //Initalize margin of red line based on difficulty 
                         int margin = 3;
                         if (gameDifficulty == DIFF_MEDIUM)
                             margin = 2;
                         else if (gameDifficulty == DIFF_HARD)
                             margin = 1;
+                        // Was W release it while the gap was on the line?
                         if (!pinSet[currentPinIndex]) {
                             // Check against THIS specific pin's random target height!
                             if (pinYPositions[currentPinIndex] >=
                                     pinTargetY[currentPinIndex] - margin &&
                                 pinYPositions[currentPinIndex] <=
                                     pinTargetY[currentPinIndex] + margin) {
-                                // --- THE SEQUENCE CHECK ---
+                                //Sequence check 
                                 if (currentPinIndex == pinSequence[currentSequenceIndex]) {
                                     pinSet[currentPinIndex] = true;
                                     currentSequenceIndex++;
+                                    //Sucessful pin pick 
                                     if (currentSequenceIndex < NUM_PINS) {
                                         triggerSuccessSound();
                                     }
+                                //Wrong order 
                                 } else {
                                     for (int i = 0; i < NUM_PINS; i++) {
                                         pinSet[i] = false;
@@ -38012,7 +38015,7 @@ int main(void)
                         continue;
                     }
 
-                    // For testing
+                    // For testing, to hard reset game 
                     if (keyByte == (char)0x45)  // 0 -> instant fail
                     {
                         elapsedTime = 1000;  // Set to a high number to trigger game over on
@@ -38025,7 +38028,7 @@ int main(void)
                         currentSequenceIndex = NUM_PINS;
                     }
 
-                    // Key pressed
+                    // Key pressed for lockpick movement 
                     bool isLeft = (!extendedKey && keyByte == (char)0x1C) ||  // A
                                   (extendedKey && keyByte == (char)0x6B);     // Left arrow
                     bool isRight = (!extendedKey && keyByte == (char)0x23) || // D
@@ -38034,7 +38037,8 @@ int main(void)
                                 (extendedKey && keyByte == (char)0x75);       // Up arrow
 
                     extendedKey = false;  // reset after use
-
+                    
+                    //Lockpick pressed 
                     if (isLeft && !isHoldingW) {
                         if (currentPinIndex > 0) currentPinIndex--;
                     } else if (isRight && !isHoldingW) {
@@ -38100,7 +38104,7 @@ int main(void)
             eraseDynamicElements();
             updateAudio();
 
-            // Snap pick position
+            // Snap pick position out of 5 possible lock positions
             pickXPosition = LOCK_BASE_X + 32 + (currentPinIndex * 32);
 
             drawDynamicElements();
@@ -38108,7 +38112,7 @@ int main(void)
 
             int maxTime = 180;
             if (gameDifficulty == DIFF_MEDIUM) maxTime = 120;
-            if (gameDifficulty == DIFF_HARD) maxTime = 60;
+            if (gameDifficulty == DIFF_HARD) maxTime = 10;
 
             int setTotal = 0;
             for (int i = 0; i < NUM_PINS; i++) {
@@ -38116,7 +38120,8 @@ int main(void)
             }
 
             totalPinsUp = setTotal;
-
+            
+            //All pins unlocked 
             if (totalPinsUp == NUM_PINS) {
                 triggerVictorySound();
                 timerStarted = 0;
@@ -38133,7 +38138,9 @@ int main(void)
                 drawEndScreen();
 
                 state = END_STATE;
-            } else if (elapsedTime >= maxTime) {
+            } 
+            //Ran out of time 
+            else if (elapsedTime >= maxTime) {
                 triggerGameFail();
                 timerStarted = 0;
                 gameWon = false;
@@ -38150,9 +38157,9 @@ int main(void)
                 drawEndScreen();
 
                 state = END_STATE;
-            } else {
-                // Game is still actively running
-                // updateLEDs(elapsedTime);
+            } 
+            //Game continue 
+            else {
                 drawTimer();
                 drawRotaryBar();
             }
@@ -38568,13 +38575,12 @@ void drawDynamicElements()
     drawRectangle(pickXPosition - 4, tipTopY, 4, 4, COLOR_PICK);
 }
 
-// Paints over the specific tracks to erase the old pick and springs
-// without having to redraw the heavy wood and brass background.
+// Paints over the specific tracks to erase the old pick and springs without having to redraw the heavy wood and brass background.
 void eraseDynamicElements()
 {
-    // Declare the variables locally inside the function!
+    // Declare the variables locally inside the function
     int lineThickness = 3;
-    int marginOffset = 3; // <-- Capital 'O'
+    int marginOffset = 3; 
 
     if (gameDifficulty == DIFF_MEDIUM)
     {
@@ -38587,10 +38593,10 @@ void eraseDynamicElements()
         marginOffset = 1;
     }
 
-    // 1. Patch the horizontal lockpick keyhole track
+    //Patch the horizontal lockpick keyhole track
     drawRectangle(LOCK_BASE_X, 130, LOCK_WIDTH, 24, COLOR_BLACK);
 
-    // 2. Patch the vertical pin chambers
+    //Patch the vertical pin chambers
     for (int i = 0; i < NUM_PINS; i++)
     {
         int chamber_x = LOCK_BASE_X + 25 + (i * 32);
@@ -38915,60 +38921,36 @@ void resetGameUIState()
 void triggerSuccessSound()
 {
     currentAudioArray = (const short int *)(successSound + 44);
-
-    // THE FIX: Subtract 44 for the header, divide by 2 for the 16-bit shift,
-    // and then subtract 500 samples from the tail to chop off the garbage
-    // metadata!
     audioArrayLength = ((sizeof(successSound) - 44) / 2) - 200;
     audioPlayIndex = 0;
 }
 
 void triggerFailSound()
 {
-    // 1. Skip the 44-byte WAV header
-    // 2. Cast the remaining 8-bit array into 16-bit audio samples!
-    currentAudioArray =
-        (const short int *)(failSound +
-                            44); // <-- MAKE SURE THIS MATCHES YOUR ARRAY NAME
-
-    // 3. Calculate the length and chop 500 samples off the tail to prevent
-    // metadata static
+    currentAudioArray = (const short int *)(failSound + 44); 
     audioArrayLength = ((sizeof(failSound) - 44) / 2) - 200;
     audioPlayIndex = 0;
 }
 
 void triggerVictorySound()
 {
-    // 1. Skip the 44-byte WAV header
-    // 2. Cast the remaining 8-bit array into 16-bit audio samples!
+    //Skip glitchy audio at the start 
     currentAudioArray = (const short int *)(gameVictory + 44);
-
-    // 3. Calculate the length and chop 500 samples off the tail to prevent
-    // metadata static
+    //Calculate the length and chop 200 samples off the tail to prevent
     audioArrayLength = ((sizeof(gameVictory) - 44) / 2) - 200;
     audioPlayIndex = 0;
 }
 
 void triggerGameStart()
 {
-    // 1. Skip the 44-byte WAV header
-    // 2. Cast the remaining 8-bit array into 16-bit audio samples!
     currentAudioArray = (const short int *)(gameStart + 44);
-
-    // 3. Calculate the length and chop 500 samples off the tail to prevent
-    // metadata static
     audioArrayLength = ((sizeof(gameStart) - 44) / 2) - 200;
     audioPlayIndex = 0;
 }
 
 void triggerGameFail()
 {
-    // 1. Skip the 44-byte WAV header
-    // 2. Cast the remaining 8-bit array into 16-bit audio samples!
     currentAudioArray = (const short int *)(gameFail + 44);
-
-    // 3. Calculate the length and chop 500 samples off the tail to prevent
-    // metadata static
     audioArrayLength = ((sizeof(gameFail) - 44) / 2) - 200;
     audioPlayIndex = 0;
 }
@@ -38980,7 +38962,7 @@ void updateAudio()
         return;
     }
 
-    // Find out how much room the speakers have right now using the clean struct!
+    // Find out how much room the speakers have right now using the clean struct
     int leftSpace = audiop->walc;
     int rightSpace = audiop->warc;
     int spaceToWrite = (leftSpace < rightSpace) ? leftSpace : rightSpace;
